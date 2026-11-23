@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { ChessBoardView } from "./ChessBoardView";
+import { generateCoachComment } from "@/actions/coach";
+import { useTextToSpeech } from "@/lib/speech";
 import type { Game, Analysis, AnalyzedMove, MoveClassification } from "@/types";
 
 interface GameReplayModalProps {
@@ -80,6 +82,11 @@ const CLASSIFICATION_CONFIG: Record<
 export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProps) {
   const moves: AnalyzedMove[] = (analysis.movesData as any) || [];
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [coachComment, setCoachComment] = useState<string>("");
+  const [loadingComment, setLoadingComment] = useState(false);
+  const [autoVoice, setAutoVoice] = useState(true);
+
+  const { speak, stop, isSpeaking } = useTextToSpeech();
 
   // Navigazione da tastiera con le frecce direzionali
   useEffect(() => {
@@ -107,6 +114,43 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
       ? CLASSIFICATION_CONFIG[currentMove.classification]
       : null;
 
+  // Genera commento AI DeepSeek e parla con TTS ogni volta che cambia mossa
+  useEffect(() => {
+    if (!currentMove) {
+      setCoachComment("");
+      stop();
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingComment(true);
+
+    generateCoachComment({
+      move: currentMove,
+      whitePlayer: game.whitePlayer,
+      blackPlayer: game.blackPlayer,
+    })
+      .then((comment) => {
+        if (!isMounted) return;
+        setCoachComment(comment);
+        setLoadingComment(false);
+        if (autoVoice) {
+          speak(comment);
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error("Coach error:", err);
+        setCoachComment(moveConfig?.coachComment || "Mossa registrata.");
+        setLoadingComment(false);
+      });
+
+    return () => {
+      isMounted = false;
+      stop();
+    };
+  }, [currentStep, autoVoice, currentMove, game.whitePlayer, game.blackPlayer, moveConfig?.coachComment, speak, stop]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
       <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl">
@@ -123,12 +167,29 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
               <span className="text-sky-400 font-semibold">{analysis.blackAccuracy}% (N)</span>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-zinc-400 hover:text-white bg-zinc-800/60 hover:bg-zinc-800 px-3 py-1.5 rounded-xl text-sm transition"
-          >
-            Chiudi ✕
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Toggle Voce Automatica */}
+            <button
+              onClick={() => {
+                if (autoVoice) stop();
+                setAutoVoice(!autoVoice);
+              }}
+              className={`text-xs px-3 py-1.5 rounded-xl border transition flex items-center gap-1.5 font-medium ${
+                autoVoice
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                  : "bg-zinc-800/40 text-zinc-500 border-zinc-700/40"
+              }`}
+            >
+              <span>{autoVoice ? "🔊 Voce Attiva" : "🔇 Voce Disattivata"}</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="text-zinc-400 hover:text-white bg-zinc-800/60 hover:bg-zinc-800 px-3 py-1.5 rounded-xl text-sm transition"
+            >
+              Chiudi ✕
+            </button>
+          </div>
         </div>
 
         {/* Corpo: Scacchiera a sinistra, Dettagli e Mosse a destra */}
@@ -204,10 +265,23 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
                   )}
                 </div>
 
-                {/* Commento esplicativo */}
-                <div className="text-xs text-zinc-300 leading-relaxed bg-zinc-900/60 p-3 rounded-xl border border-zinc-800/60">
-                  <span className="font-semibold text-zinc-400 block mb-1">Coach Note:</span>
-                  {moveConfig?.coachComment}
+                {/* Commento esplicativo AI DeepSeek */}
+                <div className="text-xs text-zinc-300 leading-relaxed bg-zinc-900/60 p-3.5 rounded-xl border border-zinc-800/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                      <span>🤖</span> Coach DeepSeek:
+                    </span>
+                    <button
+                      onClick={() => (isSpeaking ? stop() : speak(coachComment))}
+                      className="text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded-lg border border-zinc-700 transition flex items-center gap-1"
+                      title="Riascolta voce"
+                    >
+                      {isSpeaking ? "🔊 Parla..." : "🔈 Riascolta"}
+                    </button>
+                  </div>
+                  <p className="italic text-zinc-200">
+                    {loadingComment ? "Il Coach sta analizzando la mossa..." : coachComment}
+                  </p>
                 </div>
 
                 {/* Suggerimento Stockfish se non è la migliore */}
