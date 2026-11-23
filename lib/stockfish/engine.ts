@@ -17,8 +17,19 @@ export class StockfishEngine {
   }
 
   private initEngine() {
-    const stockfishPath = path.resolve(process.cwd(), "node_modules/stockfish.js/stockfish.js");
-    const scriptContent = fs.readFileSync(stockfishPath, "utf8");
+    let scriptContent = "";
+    try {
+      const stockfishPath = path.resolve(process.cwd(), "node_modules/stockfish.js/stockfish.js");
+      scriptContent = fs.readFileSync(stockfishPath, "utf8");
+    } catch {
+      // Fallback per bundler Webpack/Next.js e serverless
+      try {
+        const resolvedPath = require.resolve("stockfish.js/stockfish.js");
+        scriptContent = fs.readFileSync(resolvedPath, "utf8");
+      } catch (e: any) {
+        throw new Error(`Impossibile caricare il file binario di Stockfish: ${e.message}`);
+      }
+    }
 
     this.sandbox = {
       console,

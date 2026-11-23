@@ -1,37 +1,43 @@
 "use client";
 
 import { useState } from "react";
-import { importAndAnalyzeRecentGames } from "@/actions/import";
+import { importRecentGames } from "@/actions/import";
 import { saveGameFromPgn } from "@/actions/games";
 import { analyzeAndSaveGame } from "@/actions/analysis";
+import type { Game, Analysis } from "@/types";
+
+interface GameItem {
+  game: Game;
+  isExisting: boolean;
+  analysis?: Analysis | null;
+}
 
 export default function Home() {
   const [platform, setPlatform] = useState<"chesscom" | "lichess">("chesscom");
   const [username, setUsername] = useState("");
   const [pgnText, setPgnText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [analyzingGameId, setAnalyzingGameId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [gamesList, setGamesList] = useState<GameItem[]>([]);
 
-  // 1. Import da Chess.com o Lichess
+  // 1. Scarica le partite (rapido: 1-2 secondi)
   const handleImport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) return;
 
     setLoading(true);
-    setStatusMessage(`Download partite in corso per "${username}" da ${platform}...`);
-    setResults([]);
+    setStatusMessage(`Download delle partite in corso per "${username}" da ${platform}...`);
 
     try {
-      const data = await importAndAnalyzeRecentGames({
+      const data = await importRecentGames({
         platform,
         platformUsername: username.trim(),
-        limit: 3,
-        depth: 10,
+        limit: 10,
       });
 
-      setResults(data);
-      setStatusMessage(`Analisi completata con successo! Trovate e analizzate ${data.length} partite.`);
+      setGamesList(data);
+      setStatusMessage(`Scaricamento completato! Trovate ${data.length} partite. Scegli quale analizzare.`);
     } catch (err: any) {
       console.error(err);
       setStatusMessage(`Errore: ${err.message || "Errore durante l'importazione"}`);
@@ -40,34 +46,46 @@ export default function Home() {
     }
   };
 
-  // 2. Analisi manuale da testo PGN incollato
+  // 2. Analizza una singola partita on-demand
+  const handleAnalyzeGame = async (gameId: string) => {
+    setAnalyzingGameId(gameId);
+    setStatusMessage("Analisi con Stockfish in corso...");
+
+    try {
+      const res = await analyzeAndSaveGame(gameId, 10);
+      setGamesList((prev) =>
+        prev.map((item) =>
+          item.game.id === gameId ? { ...item, analysis: res.analysis } : item
+        )
+      );
+      setStatusMessage("Analisi partita completata con successo!");
+    } catch (err: any) {
+      console.error(err);
+      setStatusMessage(`Errore analisi: ${err.message || "Errore sconosciuto"}`);
+    } finally {
+      setAnalyzingGameId(null);
+    }
+  };
+
+  // 3. Salva e analizza PGN incollato manualmente
   const handleAnalyzePgn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pgnText.trim()) return;
 
     setLoading(true);
-    setStatusMessage("Salvataggio PGN e avvio motore Stockfish...");
-    setResults([]);
+    setStatusMessage("Salvataggio PGN...");
 
     try {
       const saved = await saveGameFromPgn({
         pgn: pgnText.trim(),
       });
 
-      setStatusMessage("Partita registrata, esecuzione analisi Stockfish...");
-      const analysisResult = await analyzeAndSaveGame(saved.game.id, 10);
-
-      setResults([
-        {
-          game: saved.game,
-          analysis: analysisResult.analysis,
-          isExisting: saved.isExisting,
-        },
-      ]);
-      setStatusMessage("Analisi completata!");
+      setGamesList((prev) => [{ game: saved.game, isExisting: saved.isExisting }, ...prev]);
+      setStatusMessage("Partita salvata. Avvio analisi...");
+      await handleAnalyzeGame(saved.game.id);
     } catch (err: any) {
       console.error(err);
-      setStatusMessage(`Errore: ${err.message || "Errore durante l'analisi"}`);
+      setStatusMessage(`Errore: ${err.message || "Errore salvataggio PGN"}`);
     } finally {
       setLoading(false);
     }
@@ -83,7 +101,7 @@ export default function Home() {
             <span>♞</span> Chess Analyze
           </h1>
           <p className="text-zinc-400 mt-2 text-sm md:text-base">
-            Importa le tue partite da Chess.com / Lichess o incolla un PGN per analizzarle con Stockfish.
+            Scarica le tue partite da Chess.com / Lichess e scegli quale analizzare con Stockfish.
           </p>
         </header>
 
@@ -94,7 +112,7 @@ export default function Home() {
           <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
             <div>
               <h2 className="text-lg font-semibold mb-4 text-emerald-400 flex items-center gap-2">
-                <span>🌐</span> Importa da Piattaforma
+                <span>🌐</span> Scarica da Piattaforma
               </h2>
               <form onSubmit={handleImport} className="space-y-4">
                 <div className="flex gap-4">
@@ -130,7 +148,7 @@ export default function Home() {
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Es. hikaru, magnuscarlsen"
+                    placeholder="Es. antonio, hikaru"
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -140,7 +158,7 @@ export default function Home() {
                   disabled={loading || !username.trim()}
                   className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium py-2 rounded-lg text-sm transition-all shadow-md"
                 >
-                  {loading ? "Analisi in corso..." : "Scarica e Analizza"}
+                  {loading ? "Scaricamento in corso..." : "Scarica Partite"}
                 </button>
               </form>
             </div>
@@ -171,7 +189,7 @@ export default function Home() {
                   disabled={loading || !pgnText.trim()}
                   className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-medium py-2 rounded-lg text-sm transition-all shadow-md"
                 >
-                  {loading ? "Analisi in corso..." : "Analizza PGN"}
+                  {loading ? "Elaborazione..." : "Importa e Analizza"}
                 </button>
               </form>
             </div>
@@ -186,64 +204,80 @@ export default function Home() {
           </div>
         )}
 
-        {/* Risultati Analisi */}
-        {results.length > 0 && (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold tracking-tight">Risultati Analisi</h2>
-            <div className="grid grid-cols-1 gap-6">
-              {results.map((item, idx) => {
+        {/* Lista Partite Scaricate */}
+        {gamesList.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold tracking-tight">Partite Disponibili ({gamesList.length})</h2>
+            <div className="grid grid-cols-1 gap-4">
+              {gamesList.map((item) => {
                 const game = item.game;
                 const analysis = item.analysis;
+                const isAnalyzing = analyzingGameId === game.id;
+
                 return (
                   <div
-                    key={game.id || idx}
-                    className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4"
+                    key={game.id}
+                    className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4 transition-all hover:border-zinc-700"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 pb-4">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
                       <div>
-                        <div className="text-base font-semibold">
+                        <div className="text-base font-semibold text-zinc-100">
                           {game.whitePlayer || "Bianco"} vs {game.blackPlayer || "Nero"}
                         </div>
-                        <div className="text-xs text-zinc-500">
-                          Risultato: {game.result || "N/D"} • Giocata il:{" "}
+                        <div className="text-xs text-zinc-400 mt-1">
+                          Risultato: <span className="font-mono text-zinc-200">{game.result || "N/D"}</span> • Data:{" "}
                           {game.playedAt ? new Date(game.playedAt).toLocaleDateString() : "N/D"}
                         </div>
                       </div>
-                      <div className="flex gap-4">
-                        <div className="text-right">
-                          <span className="text-xs text-zinc-400 block">Accuratezza Bianco</span>
-                          <span className="text-lg font-bold text-emerald-400">
-                            {analysis?.whiteAccuracy ? `${analysis.whiteAccuracy}%` : "-"}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs text-zinc-400 block">Accuratezza Nero</span>
-                          <span className="text-lg font-bold text-sky-400">
-                            {analysis?.blackAccuracy ? `${analysis.blackAccuracy}%` : "-"}
-                          </span>
-                        </div>
+
+                      {/* Azione Analizza o Risultato Accuratezza */}
+                      <div>
+                        {analysis ? (
+                          <div className="flex items-center gap-4 bg-zinc-950 px-4 py-2 rounded-xl border border-zinc-800">
+                            <div className="text-right">
+                              <span className="text-[10px] text-zinc-500 uppercase block">Bianco</span>
+                              <span className="text-sm font-bold text-emerald-400">
+                                {analysis.whiteAccuracy}%
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] text-zinc-500 uppercase block">Nero</span>
+                              <span className="text-sm font-bold text-sky-400">
+                                {analysis.blackAccuracy}%
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleAnalyzeGame(game.id)}
+                            disabled={isAnalyzing || Boolean(analyzingGameId)}
+                            className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-100 text-xs font-semibold px-4 py-2 rounded-xl border border-zinc-700 transition-all flex items-center gap-2"
+                          >
+                            {isAnalyzing ? "Analisi in corso..." : "⚡ Analizza Partita"}
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    {/* Dettaglio Blunder ed errori */}
+                    {/* Dettaglio Errori / Blunder se analizzata */}
                     {analysis?.summary && (
-                      <div className="grid grid-cols-2 gap-4 text-xs bg-zinc-950 p-4 rounded-xl border border-zinc-800">
+                      <div className="grid grid-cols-2 gap-4 text-xs bg-zinc-950 p-4 rounded-xl border border-zinc-800/80">
                         <div>
                           <div className="font-semibold text-zinc-300 mb-1">Mosse Bianco:</div>
                           <div className="text-zinc-400 space-y-0.5">
-                            <div>★ Migliori: {analysis.summary.whiteStats?.best ?? 0}</div>
-                            <div>▲ Inesattezze: {analysis.summary.whiteStats?.inaccuracy ?? 0}</div>
-                            <div>✖ Errori: {analysis.summary.whiteStats?.mistake ?? 0}</div>
-                            <div>💀 Blunder: {analysis.summary.whiteStats?.blunder ?? 0}</div>
+                            <div>★ Migliori: {(analysis.summary as any).whiteStats?.best ?? 0}</div>
+                            <div>▲ Inesattezze: {(analysis.summary as any).whiteStats?.inaccuracies ?? 0}</div>
+                            <div>✖ Errori: {(analysis.summary as any).whiteStats?.mistakes ?? 0}</div>
+                            <div>💀 Blunder: {(analysis.summary as any).whiteStats?.blunders ?? 0}</div>
                           </div>
                         </div>
                         <div>
                           <div className="font-semibold text-zinc-300 mb-1">Mosse Nero:</div>
                           <div className="text-zinc-400 space-y-0.5">
-                            <div>★ Migliori: {analysis.summary.blackStats?.best ?? 0}</div>
-                            <div>▲ Inesattezze: {analysis.summary.blackStats?.inaccuracy ?? 0}</div>
-                            <div>✖ Errori: {analysis.summary.blackStats?.mistake ?? 0}</div>
-                            <div>💀 Blunder: {analysis.summary.blackStats?.blunder ?? 0}</div>
+                            <div>★ Migliori: {(analysis.summary as any).blackStats?.best ?? 0}</div>
+                            <div>▲ Inesattezze: {(analysis.summary as any).blackStats?.inaccuracies ?? 0}</div>
+                            <div>✖ Errori: {(analysis.summary as any).blackStats?.mistakes ?? 0}</div>
+                            <div>💀 Blunder: {(analysis.summary as any).blackStats?.blunders ?? 0}</div>
                           </div>
                         </div>
                       </div>
