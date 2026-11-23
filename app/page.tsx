@@ -260,24 +260,24 @@ export default function Home() {
                     </div>
 
                     {/* Dettaglio Errori / Blunder se analizzata */}
-                    {analysis?.summary && (
+                    {Boolean(analysis?.summary) && (
                       <div className="grid grid-cols-2 gap-4 text-xs bg-zinc-950 p-4 rounded-xl border border-zinc-800/80">
                         <div>
                           <div className="font-semibold text-zinc-300 mb-1">Mosse Bianco:</div>
                           <div className="text-zinc-400 space-y-0.5">
-                            <div>★ Migliori: {(analysis.summary as any).whiteStats?.best ?? 0}</div>
-                            <div>▲ Inesattezze: {(analysis.summary as any).whiteStats?.inaccuracies ?? 0}</div>
-                            <div>✖ Errori: {(analysis.summary as any).whiteStats?.mistakes ?? 0}</div>
-                            <div>💀 Blunder: {(analysis.summary as any).whiteStats?.blunders ?? 0}</div>
+                            <div>★ Migliori: {String((analysis?.summary as any)?.whiteStats?.best ?? 0)}</div>
+                            <div>▲ Inesattezze: {String((analysis?.summary as any)?.whiteStats?.inaccuracies ?? 0)}</div>
+                            <div>✖ Errori: {String((analysis?.summary as any)?.whiteStats?.mistakes ?? 0)}</div>
+                            <div>💀 Blunder: {String((analysis?.summary as any)?.whiteStats?.blunders ?? 0)}</div>
                           </div>
                         </div>
                         <div>
                           <div className="font-semibold text-zinc-300 mb-1">Mosse Nero:</div>
                           <div className="text-zinc-400 space-y-0.5">
-                            <div>★ Migliori: {(analysis.summary as any).blackStats?.best ?? 0}</div>
-                            <div>▲ Inesattezze: {(analysis.summary as any).blackStats?.inaccuracies ?? 0}</div>
-                            <div>✖ Errori: {(analysis.summary as any).blackStats?.mistakes ?? 0}</div>
-                            <div>💀 Blunder: {(analysis.summary as any).blackStats?.blunders ?? 0}</div>
+                            <div>★ Migliori: {String((analysis?.summary as any)?.blackStats?.best ?? 0)}</div>
+                            <div>▲ Inesattezze: {String((analysis?.summary as any)?.blackStats?.inaccuracies ?? 0)}</div>
+                            <div>✖ Errori: {String((analysis?.summary as any)?.blackStats?.mistakes ?? 0)}</div>
+                            <div>💀 Blunder: {String((analysis?.summary as any)?.blackStats?.blunders ?? 0)}</div>
                           </div>
                         </div>
                       </div>
