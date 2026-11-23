@@ -6,7 +6,6 @@ import { eq, and } from "drizzle-orm";
 import { parsePgn } from "@/lib/chess/pgn";
 import type { Game, NewGame, GameWithAnalysis, SaveGameFromPgnInput } from "@/types";
 import type { ParsedPgnResult } from "@/types/chess";
-import { getOrCreateDefaultUser } from "./users";
 
 /**
  * Cerca una partita esistente per utente e hash PGN (evita duplicati)
@@ -49,23 +48,17 @@ export async function saveGameFromPgn(input: SaveGameFromPgnInput): Promise<{
   parsed: ParsedPgnResult;
   isExisting: boolean;
 }> {
-  let targetUserId = input.userId;
-  if (!targetUserId || targetUserId === "default-user") {
-    const defaultUser = await getOrCreateDefaultUser();
-    targetUserId = defaultUser.id;
-  }
-
   const parsed = parsePgn(input.pgn, input.knownUsername);
   const resolvedColor = input.userColor || parsed.userColor || null;
 
   // Controllo unicità per userId + pgnHash
-  const existing = await findGameByUserAndHash(targetUserId, parsed.pgnHash);
+  const existing = await findGameByUserAndHash(input.userId, parsed.pgnHash);
   if (existing) {
     return { game: existing, parsed, isExisting: true };
   }
 
   const newGame: NewGame = {
-    userId: targetUserId,
+    userId: input.userId,
     pgnHash: parsed.pgnHash,
     pgn: parsed.normalizedPgn,
     whitePlayer: parsed.whitePlayer,
@@ -94,3 +87,4 @@ export async function listGamesByUserId(
     .orderBy(games.createdAt)
     .limit(limit);
 }
+

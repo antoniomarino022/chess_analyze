@@ -4,12 +4,11 @@ import { ChessComService } from "@/services/chess-com.service";
 import { LichessService } from "@/services/lichess.service";
 import { saveGameFromPgn } from "./games";
 import { analyzeAndSaveGame } from "./analysis";
-import { getOrCreateDefaultUser } from "./users";
 
 export interface ImportAndAnalyzeOptions {
   platform: "chesscom" | "lichess";
   platformUsername: string;
-  userId?: string;
+  userId: string;
   limit?: number;
   depth?: number;
 }
@@ -19,13 +18,7 @@ export interface ImportAndAnalyzeOptions {
  * le salva a database e avvia l'analisi Stockfish.
  */
 export async function importAndAnalyzeRecentGames(options: ImportAndAnalyzeOptions) {
-  const { platform, platformUsername, limit = 5, depth = 12 } = options;
-
-  let targetUserId = options.userId;
-  if (!targetUserId || targetUserId === "default-user") {
-    const defaultUser = await getOrCreateDefaultUser();
-    targetUserId = defaultUser.id;
-  }
+  const { platform, platformUsername, userId, limit = 5, depth = 12 } = options;
 
   // 1. Fetch da API esterna
   const externalGames =
@@ -39,7 +32,7 @@ export async function importAndAnalyzeRecentGames(options: ImportAndAnalyzeOptio
   for (const extGame of externalGames) {
     // Salva nel database
     const saved = await saveGameFromPgn({
-      userId: targetUserId,
+      userId,
       pgn: extGame.pgn,
       knownUsername: platformUsername,
     });
@@ -56,3 +49,4 @@ export async function importAndAnalyzeRecentGames(options: ImportAndAnalyzeOptio
 
   return results;
 }
+
