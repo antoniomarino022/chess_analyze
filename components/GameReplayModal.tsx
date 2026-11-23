@@ -15,6 +15,18 @@ const CLASSIFICATION_CONFIG: Record<
   MoveClassification,
   { label: string; badgeColor: string; icon: string; coachComment: string }
 > = {
+  brilliant: {
+    label: "Brillante",
+    badgeColor: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+    icon: "!!",
+    coachComment: "Mossa geniale! Un sacrificio o una manovra tattica eccezionale.",
+  },
+  great: {
+    label: "Ottima",
+    badgeColor: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    icon: "!",
+    coachComment: "Mossa fondamentale per mantenere il vantaggio nella posizione.",
+  },
   best: {
     label: "Migliore",
     badgeColor: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
@@ -57,6 +69,12 @@ const CLASSIFICATION_CONFIG: Record<
     icon: "💀",
     coachComment: "Errore decisivo (svista grave). Perde materiale netto o compromette la partita.",
   },
+  missed_win: {
+    label: "Vittoria Mancata",
+    badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+    icon: "≠",
+    coachComment: "C'era una combinazione vincente forzata che non è stata colta.",
+  },
 };
 
 export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProps) {
@@ -84,7 +102,10 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
     ? currentMove.fenAfter
     : moves[0]?.fenBefore || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-  const moveConfig = currentMove ? CLASSIFICATION_CONFIG[currentMove.classification] : null;
+  const moveConfig =
+    currentMove && currentMove.classification
+      ? CLASSIFICATION_CONFIG[currentMove.classification]
+      : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
@@ -236,7 +257,9 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
                         >
                           {whiteMove.san}{" "}
                           <span className="text-[10px] opacity-75">
-                            {CLASSIFICATION_CONFIG[whiteMove.classification]?.icon}
+                            {whiteMove.classification
+                              ? CLASSIFICATION_CONFIG[whiteMove.classification]?.icon
+                              : ""}
                           </span>
                         </button>
                       )}
@@ -251,7 +274,9 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
                         >
                           {blackMove.san}{" "}
                           <span className="text-[10px] opacity-75">
-                            {CLASSIFICATION_CONFIG[blackMove.classification]?.icon}
+                            {blackMove.classification
+                              ? CLASSIFICATION_CONFIG[blackMove.classification]?.icon
+                              : ""}
                           </span>
                         </button>
                       )}
