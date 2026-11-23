@@ -19,7 +19,8 @@ export async function generateCoachComment(
 
   // Se non c'è la chiave, forniamo un commento di fallback chiaro
   if (!apiKey) {
-    return `Mossa ${move.san} di ${playerName}. Valutata come ${move.classification} da Stockfish.`;
+    console.warn("DEEPSEEK_API_KEY non trovata nelle variabili d'ambiente di Next.js!");
+    return `[API KEY MANCANTE] Mossa ${move.san} di ${playerName}. Inserisci DEEPSEEK_API_KEY su Vercel.`;
   }
 
   const systemPrompt = `
@@ -74,7 +75,7 @@ Genera il tuo commento da coach:
     if (!response.ok) {
       const errText = await response.text();
       console.error("DeepSeek API error:", response.status, errText);
-      return `Mossa ${move.san}. Classificata come ${move.classification}. Mossa consigliata: ${move.bestMove || "-"}.`;
+      return `[Errore DeepSeek ${response.status}] ${errText.slice(0, 80)}`;
     }
 
     const data = await response.json();
@@ -86,6 +87,6 @@ Genera il tuo commento da coach:
     );
   } catch (err: any) {
     console.error("Errore chiamata DeepSeek:", err);
-    return `Mossa ${move.san}: ${move.classification}.`;
+    return `[Errore Rete DeepSeek: ${err?.message || "sconosciuto"}]`;
   }
 }
