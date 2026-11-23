@@ -4,6 +4,7 @@ import { useState } from "react";
 import { importRecentGames } from "@/actions/import";
 import { saveGameFromPgn } from "@/actions/games";
 import { analyzeAndSaveGame } from "@/actions/analysis";
+import { GameReplayModal } from "@/components/GameReplayModal";
 import type { Game, Analysis } from "@/types";
 
 interface GameItem {
@@ -20,6 +21,7 @@ export default function Home() {
   const [analyzingGameId, setAnalyzingGameId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [gamesList, setGamesList] = useState<GameItem[]>([]);
+  const [selectedGameForReplay, setSelectedGameForReplay] = useState<GameItem | null>(null);
 
   // 1. Scarica le partite (rapido: 1-2 secondi)
   const handleImport = async (e: React.FormEvent) => {
@@ -231,22 +233,30 @@ export default function Home() {
                       </div>
 
                       {/* Azione Analizza o Risultato Accuratezza */}
-                      <div>
+                      <div className="flex items-center gap-3">
                         {analysis ? (
-                          <div className="flex items-center gap-4 bg-zinc-950 px-4 py-2 rounded-xl border border-zinc-800">
-                            <div className="text-right">
-                              <span className="text-[10px] text-zinc-500 uppercase block">Bianco</span>
-                              <span className="text-sm font-bold text-emerald-400">
-                                {analysis.whiteAccuracy}%
-                              </span>
+                          <>
+                            <div className="flex items-center gap-4 bg-zinc-950 px-4 py-2 rounded-xl border border-zinc-800">
+                              <div className="text-right">
+                                <span className="text-[10px] text-zinc-500 uppercase block">Bianco</span>
+                                <span className="text-sm font-bold text-emerald-400">
+                                  {analysis.whiteAccuracy}%
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[10px] text-zinc-500 uppercase block">Nero</span>
+                                <span className="text-sm font-bold text-sky-400">
+                                  {analysis.blackAccuracy}%
+                                </span>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <span className="text-[10px] text-zinc-500 uppercase block">Nero</span>
-                              <span className="text-sm font-bold text-sky-400">
-                                {analysis.blackAccuracy}%
-                              </span>
-                            </div>
-                          </div>
+                            <button
+                              onClick={() => setSelectedGameForReplay(item)}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5"
+                            >
+                              <span>♟</span> Rivedi Partita
+                            </button>
+                          </>
                         ) : (
                           <button
                             onClick={() => handleAnalyzeGame(game.id)}
@@ -290,6 +300,15 @@ export default function Home() {
         )}
 
       </div>
+
+      {/* Modal Replay Interattivo della Partita */}
+      {selectedGameForReplay && selectedGameForReplay.analysis && (
+        <GameReplayModal
+          game={selectedGameForReplay.game}
+          analysis={selectedGameForReplay.analysis}
+          onClose={() => setSelectedGameForReplay(null)}
+        />
+      )}
     </div>
   );
 }
