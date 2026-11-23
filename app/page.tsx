@@ -52,7 +52,7 @@ export default function Home() {
     setStatusMessage("Analisi con Stockfish in corso...");
 
     try {
-      const res = await analyzeAndSaveGame(gameId, 10);
+      const res = await analyzeAndSaveGame(gameId, 8);
       setGamesList((prev) =>
         prev.map((item) =>
           item.game.id === gameId ? { ...item, analysis: res.analysis } : item

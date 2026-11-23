@@ -27,7 +27,7 @@ export async function getAnalysisByGameId(
  */
 export async function analyzeAndSaveGame(
   gameId: string,
-  depth = 12
+  depth = 8
 ): Promise<{ analysis: Analysis; isExisting: boolean }> {
   // 1. Controllo se già analizzata
   const existing = await getAnalysisByGameId(gameId);

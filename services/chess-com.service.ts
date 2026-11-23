@@ -67,20 +67,22 @@ export class ChessComService {
       return [];
     }
 
-    // Prendiamo l'ultimo mese disponibile (l'ultimo URL della lista)
-    const latestArchiveUrl = archives[archives.length - 1];
-    const gamesRes = await fetch(latestArchiveUrl, { headers: this.HEADERS });
+    // Prendiamo gli ultimi mesi a ritroso finché non abbiamo abbastanza partite
+    const reversedArchives = [...archives].reverse();
+    const rawGames: ChessComGame[] = [];
 
-    if (!gamesRes.ok) {
-      throw new Error(
-        `Errore nel download partite mensili (${gamesRes.status})`
-      );
+    for (const archiveUrl of reversedArchives) {
+      if (rawGames.length >= limit) break;
+      const gamesRes = await fetch(archiveUrl, { headers: this.HEADERS });
+      if (gamesRes.ok) {
+        const data: ChessComMonthlyGamesResponse = await gamesRes.json();
+        if (data.games) {
+          rawGames.push(...data.games);
+        }
+      }
     }
 
-    const data: ChessComMonthlyGamesResponse = await gamesRes.json();
-    const rawGames = data.games || [];
-
-    // Ordiniamo dalle più recenti alle più vecchie
+    // Ordiniamo rigorosamente dalle più recenti alle più vecchie
     const sorted = rawGames
       .filter((g) => Boolean(g.pgn))
       .sort((a, b) => b.end_time - a.end_time)

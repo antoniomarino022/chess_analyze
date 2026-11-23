@@ -80,17 +80,26 @@ export async function analyzeGamePgn(
   };
 
   try {
+    // Cache per evitare di ricalcolare due volte la stessa identica posizione FEN
+    let lastEval: { fen: string; evaluation: any } | null = null;
+
     for (let i = 0; i < parsed.moves.length; i++) {
       const move = parsed.moves[i];
       if (onProgress) {
         onProgress(i + 1, parsed.moves.length);
       }
 
-      // 1. Valutazione posizione PRIMA della mossa (trova la mossa migliore del motore)
-      const evalBefore = await engine.evaluateFen(move.fenBefore, depth);
-      
+      // 1. Valutazione posizione PRIMA della mossa: se calcolata nel turno precedente, riusala!
+      let evalBefore: any;
+      if (lastEval && lastEval.fen === move.fenBefore) {
+        evalBefore = lastEval.evaluation;
+      } else {
+        evalBefore = await engine.evaluateFen(move.fenBefore, depth);
+      }
+
       // 2. Valutazione posizione DOPO la mossa giocata
       const evalAfter = await engine.evaluateFen(move.fenAfter, depth);
+      lastEval = { fen: move.fenAfter, evaluation: evalAfter };
 
       const isWhite = move.color === "white";
 

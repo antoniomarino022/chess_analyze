@@ -66,6 +66,10 @@ export class LichessService {
       }
     }
 
-    return games;
+    // Ordina rigorosamente dalle più recenti alle più vecchie
+    return games
+      .filter((g) => Boolean(g.pgn))
+      .sort((a, b) => b.playedAt.getTime() - a.playedAt.getTime())
+      .slice(0, max);
   }
 }
