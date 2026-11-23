@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { ChessBoardView } from "./ChessBoardView";
+import { CoachAvatar } from "./CoachAvatar";
 import { generateCoachComment } from "@/actions/coach";
 import { useTextToSpeech } from "@/lib/speech";
-import type { Game, Analysis, AnalyzedMove, MoveClassification } from "@/types";
+import type { Game, Analysis, AnalyzedMove, MoveClassification, CoachMood } from "@/types";
 
 interface GameReplayModalProps {
   game: Game;
@@ -113,6 +114,17 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
     currentMove && currentMove.classification
       ? CLASSIFICATION_CONFIG[currentMove.classification]
       : null;
+
+  // Calcola il mood del coach stile Chess.com in base alla qualità della mossa
+  const coachMood: CoachMood = React.useMemo(() => {
+    if (!currentMove || !currentMove.classification) return "neutral";
+    const c = currentMove.classification;
+    if (c === "brilliant") return "proud";
+    if (c === "best" || c === "great" || c === "excellent") return "happy";
+    if (c === "inaccuracy") return "thinking";
+    if (c === "mistake" || c === "blunder" || c === "missed_win") return "shocked";
+    return "neutral";
+  }, [currentMove]);
 
   // Genera commento AI DeepSeek e parla con TTS ogni volta che cambia mossa
   useEffect(() => {
@@ -243,6 +255,13 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
           {/* Colonna Destra: Feedback mossa e Lista mosse */}
           <div className="md:col-span-5 flex flex-col space-y-4">
             
+            {/* Persona Coach Stile Chess.com Game Review con animazione facciale parlante */}
+            <CoachAvatar
+              mood={coachMood}
+              isSpeaking={isSpeaking}
+              name="Maestro Denis"
+            />
+
             {/* Box Commento Coach Mossa Corrente */}
             {currentMove ? (
               <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800 space-y-3">

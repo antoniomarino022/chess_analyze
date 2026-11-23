@@ -1,12 +1,6 @@
 "use server";
 
-import type { AnalyzedMove } from "@/types";
-
-export interface GenerateCoachCommentInput {
-  move: AnalyzedMove;
-  whitePlayer?: string | null;
-  blackPlayer?: string | null;
-}
+import type { GenerateCoachCommentInput } from "@/types";
 
 /**
  * Server Action: Genera un commento vocale/testuale in stile Coach di Scacchi
