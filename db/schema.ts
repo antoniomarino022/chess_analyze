@@ -40,7 +40,6 @@ export const games = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
-      .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     pgnHash: varchar("pgn_hash", { length: 64 }).notNull(),
     pgn: text("pgn").notNull(),

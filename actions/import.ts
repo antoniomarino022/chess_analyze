@@ -8,7 +8,7 @@ import { analyzeAndSaveGame } from "./analysis";
 export interface ImportAndAnalyzeOptions {
   platform: "chesscom" | "lichess";
   platformUsername: string;
-  userId: string;
+  userId?: string | null;
   limit?: number;
   depth?: number;
 }

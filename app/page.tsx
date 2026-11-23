@@ -26,7 +26,6 @@ export default function Home() {
       const data = await importAndAnalyzeRecentGames({
         platform,
         platformUsername: username.trim(),
-        userId: "default-user", // placeholder per utente di default
         limit: 3,
         depth: 10,
       });
@@ -52,7 +51,6 @@ export default function Home() {
 
     try {
       const saved = await saveGameFromPgn({
-        userId: "default-user",
         pgn: pgnText.trim(),
       });
 

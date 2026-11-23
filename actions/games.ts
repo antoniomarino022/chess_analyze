@@ -8,16 +8,20 @@ import type { Game, NewGame, GameWithAnalysis, SaveGameFromPgnInput } from "@/ty
 import type { ParsedPgnResult } from "@/types/chess";
 
 /**
- * Cerca una partita esistente per utente e hash PGN (evita duplicati)
+ * Cerca una partita esistente per hash PGN (e opzionalmente userId)
  */
 export async function findGameByUserAndHash(
-  userId: string,
+  userId: string | null | undefined,
   pgnHash: string
 ): Promise<Game | null> {
+  const whereClause = userId
+    ? and(eq(games.userId, userId), eq(games.pgnHash, pgnHash))
+    : eq(games.pgnHash, pgnHash);
+
   const result = await db
     .select()
     .from(games)
-    .where(and(eq(games.userId, userId), eq(games.pgnHash, pgnHash)))
+    .where(whereClause)
     .limit(1);
 
   return result[0] || null;
@@ -41,7 +45,7 @@ export async function getGameByIdWithAnalysis(
 
 /**
  * Effettua il parsing del PGN e salva la partita a database.
- * Se la partita esiste già per quell'utente, restituisce quella esistente.
+ * Se la partita esiste già, restituisce quella esistente.
  */
 export async function saveGameFromPgn(input: SaveGameFromPgnInput): Promise<{
   game: Game;
@@ -51,14 +55,14 @@ export async function saveGameFromPgn(input: SaveGameFromPgnInput): Promise<{
   const parsed = parsePgn(input.pgn, input.knownUsername);
   const resolvedColor = input.userColor || parsed.userColor || null;
 
-  // Controllo unicità per userId + pgnHash
+  // Controllo unicità
   const existing = await findGameByUserAndHash(input.userId, parsed.pgnHash);
   if (existing) {
     return { game: existing, parsed, isExisting: true };
   }
 
   const newGame: NewGame = {
-    userId: input.userId,
+    userId: input.userId || null,
     pgnHash: parsed.pgnHash,
     pgn: parsed.normalizedPgn,
     whitePlayer: parsed.whitePlayer,

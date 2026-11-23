@@ -53,7 +53,7 @@ export type GameResponse = {
  * Dati necessari per salvare una partita a partire dalla notazione PGN
  */
 export interface SaveGameFromPgnInput {
-  userId: string;
+  userId?: string | null;
   pgn: string;
   knownUsername?: string;
   userColor?: "white" | "black";
