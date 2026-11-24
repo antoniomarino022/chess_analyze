@@ -4,3 +4,4 @@ export * from "./analysis";
 export * from "./coach";
 export * from "./import";
 export * from "./ui";
+export * from "./telegram";
