@@ -56,3 +56,35 @@ This integration does not use Telegram identity or authenticate users. Do not
 trust `initDataUnsafe` as authentication; validating Telegram users requires a
 server-side check of the signed `initData` using the bot token, stored only as a
 server-side secret.
+
+### Reply to `/start`
+
+The webhook at `/api/telegram/webhook` replies to `/start` with a welcome message
+and a button that opens the Mini App. It uses `BOT_TOKEN`,
+`TELEGRAM_WEBHOOK_SECRET`, and optionally `MINI_APP_URL` (defaults to
+`https://chessanalyze.vercel.app`).
+
+1. Put these variables in the ignored local `.env.local` file, not in
+   `.env.example` or source code. Add the same variables to the Vercel project's
+   server-side Environment Variables:
+
+   ```text
+   BOT_TOKEN=your-bot-token
+   TELEGRAM_WEBHOOK_SECRET=your-random-secret
+   MINI_APP_URL=https://chessanalyze.vercel.app
+   ```
+
+2. Generate a webhook secret with:
+
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+
+3. Deploy the site to Vercel so the webhook endpoint is available.
+4. With `BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` set in local `.env.local`, run
+   `npm run telegram:set-webhook` once to register the deployed endpoint with
+   Telegram.
+5. Send `/start` to the bot.
+
+If a real bot token was committed or shared publicly, revoke it with BotFather
+and replace it in `.env.local` and Vercel.

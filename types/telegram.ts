@@ -6,6 +6,11 @@ export interface TelegramWebApp {
   setBackgroundColor?(color: string): void;
 }
 
+export type TelegramStartCommand = {
+  chatId: number;
+  language: "it" | "en";
+};
+
 declare global {
   interface Window {
     Telegram?: {
