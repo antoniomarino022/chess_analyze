@@ -78,7 +78,7 @@ export class StockfishEngine {
   /**
    * Valuta una posizione espressa in formato FEN ad una data profondità (depth)
    */
-  public async evaluateFen(fen: string, depth = 12): Promise<StockfishEvaluation> {
+  public async evaluateFen(fen: string, depth = 6): Promise<StockfishEvaluation> {
     await this.init();
 
     return new Promise((resolve, reject) => {

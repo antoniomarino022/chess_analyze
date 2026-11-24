@@ -36,8 +36,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 input[type="radio"] { accent-color: #bd985d; }
 ::placeholder { color: #777064; }
 
-.coach-avatar.is-speaking { animation: coach-talk 1.1s ease-in-out infinite; }
-@keyframes coach-talk { 0%, 100% { box-shadow: 0 0 0 4px #392d20, 0 0 0 5px #91bd6266; } 50% { box-shadow: 0 0 0 4px #392d20, 0 0 0 8px #91bd6222; } }
 .page-enter { animation: page-enter .65s cubic-bezier(.2,.75,.25,1) both; }
 .card-enter { animation: card-enter .55s cubic-bezier(.2,.75,.25,1) both; }
 .game-enter { animation: game-enter .4s cubic-bezier(.2,.75,.25,1) both; }

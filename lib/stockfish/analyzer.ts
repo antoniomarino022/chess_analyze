@@ -51,7 +51,7 @@ function classifyMove(
  */
 export async function analyzeGamePgn(
   pgn: string,
-  depth = 12,
+  depth = 6,
   onProgress?: (current: number, total: number) => void
 ): Promise<GameAnalysisResult> {
   const parsed: ParsedPgnResult = parsePgn(pgn);

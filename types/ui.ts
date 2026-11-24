@@ -22,6 +22,5 @@ export interface ChessBoardViewProps {
 
 export interface CoachAvatarProps {
   mood: CoachMood;
-  isSpeaking: boolean;
   name?: string;
 }
