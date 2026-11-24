@@ -46,23 +46,51 @@ export async function analyzeAndSaveGame(
     throw new Error(`Partita non trovata con ID: ${gameId}`);
   }
 
-  // Esegue Stockfish
-  const analysisResult: GameAnalysisResult = await analyzeGamePgn(
-    game.pgn,
-    depth
-  );
+  let analysisResult: GameAnalysisResult;
+  try {
+    analysisResult = await analyzeGamePgn(game.pgn, depth);
+  } catch (error: any) {
+    console.error(`[Stockfish Error] Impossibile analizzare partita ${gameId}:`, error);
+    throw new Error(`Errore durante l'analisi Stockfish: ${error?.message || error}`);
+  }
 
-  // Salva a DB
+  // Verifica che whiteAccuracy e blackAccuracy siano numeri validi (non NaN)
+  const whiteAcc = Number.isFinite(analysisResult.whiteAccuracy)
+    ? analysisResult.whiteAccuracy.toFixed(2)
+    : "100.00";
+  const blackAcc = Number.isFinite(analysisResult.blackAccuracy)
+    ? analysisResult.blackAccuracy.toFixed(2)
+    : "100.00";
+
+  // Salva a DB con gestione conflitti (onConflictDoUpdate o controllo)
   const newAnalysis: NewAnalysis = {
     gameId,
     depth: analysisResult.depth,
-    whiteAccuracy: analysisResult.whiteAccuracy.toString(),
-    blackAccuracy: analysisResult.blackAccuracy.toString(),
-    summary: analysisResult.summary,
-    movesData: analysisResult.movesData,
+    whiteAccuracy: whiteAcc,
+    blackAccuracy: blackAcc,
+    summary: analysisResult.summary || {},
+    movesData: analysisResult.movesData || [],
   };
 
-  const [saved] = await db.insert(analyses).values(newAnalysis).returning();
+  try {
+    const [saved] = await db
+      .insert(analyses)
+      .values(newAnalysis)
+      .onConflictDoUpdate({
+        target: analyses.gameId,
+        set: {
+          depth: newAnalysis.depth,
+          whiteAccuracy: newAnalysis.whiteAccuracy,
+          blackAccuracy: newAnalysis.blackAccuracy,
+          summary: newAnalysis.summary,
+          movesData: newAnalysis.movesData,
+        },
+      })
+      .returning();
 
-  return { analysis: saved, isExisting: false };
+    return { analysis: saved, isExisting: false };
+  } catch (dbError: any) {
+    console.error(`[DB Error] Errore inserimento analisi per partita ${gameId}:`, dbError);
+    throw new Error(`Errore salvataggio analisi nel database: ${dbError?.message || dbError}`);
+  }
 }

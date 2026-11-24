@@ -73,12 +73,13 @@ export async function analyzeGamePgn(
     };
   }
 
-  // Se la partita ha molte semimosse, adattiamo la profondità per evitare timeout serverless
-  // Esempio: > 60 semimosse (30 mosse intere) depth 4, altrimenti depth 5-6
+  // Se la partita ha molte semimosse, adattiamo la profondità per rimanere sempre entro i 10 secondi
   let effectiveDepth = depth;
-  if (parsed.moves.length > 70) {
-    effectiveDepth = Math.min(depth, 4);
-  } else if (parsed.moves.length > 40) {
+  if (parsed.moves.length > 50) {
+    effectiveDepth = 3;
+  } else if (parsed.moves.length > 30) {
+    effectiveDepth = 4;
+  } else {
     effectiveDepth = Math.min(depth, 5);
   }
 

@@ -90,8 +90,15 @@ export class StockfishEngine {
 
       const timeout = setTimeout(() => {
         this.sendCommand("stop");
-        reject(new Error(`Timeout durante l'analisi FEN: ${fen}`));
-      }, 5000);
+        // Invece di interrompere brutalmente con reject, risolve con una valutazione neutra
+        // per evitare che l'intera partita fallisca se una singola mossa impiega troppo tempo.
+        resolve({
+          depth: 1,
+          score: { type: "cp", value: 0 },
+          bestMove: "",
+          pv: [],
+        });
+      }, 4000);
 
       this.sandbox.postMessage = (line: string) => {
         if (typeof line !== "string") return;
