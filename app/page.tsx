@@ -85,7 +85,7 @@ export default function Home() {
           <div className="hero-board relative mt-6 grid grid-cols-8 overflow-hidden rounded-lg border border-white/10 opacity-70 sm:mt-8 sm:rounded-xl" aria-hidden="true">{Array.from({ length: 16 }, (_, i) => <span key={i} className={`aspect-square ${Math.floor(i / 8) % 2 === i % 8 % 2 ? "bg-[#dfcca6]/20" : "bg-[#10150f]/20"}`} />)}</div>
         </header>
 
-        <section className="mx-auto w-full max-w-2xl" aria-label={text.importAria}>
+        <section className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(18rem,0.92fr)]" aria-label={text.importAria}>
           <div style={{ animationDelay: "100ms" }} className={`card-enter ${cardClass}`}>
             <div className="mb-6 flex items-start justify-between gap-4"><div><div className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[#ba965d]">{text.profileStep}</div><h2 className="text-xl font-bold">{text.importHeading}</h2><p className="mt-1 text-sm text-[#aaa294]">{text.importDescription}</p></div><span className="text-3xl text-[#b9955c]">♜</span></div>
             <form onSubmit={handleImport} className="space-y-5">
@@ -96,6 +96,34 @@ export default function Home() {
               <button type="submit" disabled={loading || !username.trim()} className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#46714e] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-[#56875e] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"><span>{loading ? text.searchingButton : text.searchButton}</span><span className="transition-transform group-hover:translate-x-1">{loading ? "◌" : "→"}</span></button>
             </form>
           </div>
+          <aside style={{ animationDelay: "190ms" }} className={`card-enter ${cardClass}`} aria-label={text.howItWorks}>
+            <div className="mb-3 flex items-center gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#665238] bg-[#30271c] text-xl text-[#d6b776]" aria-hidden="true">♞</span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#ba965d]">{text.howItWorksEyebrow}</p>
+                <h2 className="mt-1 text-xl font-bold">{text.howItWorks}</h2>
+              </div>
+            </div>
+            <p className="mb-5 text-sm leading-6 text-[#aaa294]">{text.howItWorksDescription}</p>
+            <ol className="space-y-4">
+              {[
+                { title: text.howItWorksProfileTitle, description: text.howItWorksProfileDescription, icon: "♟" },
+                { title: text.howItWorksGameTitle, description: text.howItWorksGameDescription, icon: "♜" },
+                { title: text.howItWorksReviewTitle, description: text.howItWorksReviewDescription, icon: "♞" },
+              ].map((step, index) => (
+                <li key={step.title} className="flex items-start gap-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-[#59472e] bg-[#30271c] text-sm text-[#d6b776]" aria-hidden="true">{step.icon}</span>
+                  <div>
+                    <h3 className="text-sm font-bold text-[#e9dfcf]"><span className="mr-2 font-mono text-[10px] text-[#ba965d]">0{index + 1}</span>{step.title}</h3>
+                    <p className="mt-1 text-xs leading-5 text-[#aaa294]">{step.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-5 border-t border-[#4b3c29] pt-4 text-xs font-medium text-[#c8b58c]">
+              <span className="mr-2 text-[#d6b776]" aria-hidden="true">♙</span>{text.howItWorksFooter}
+            </div>
+          </aside>
         </section>
 
         {statusMessage && <div role="status" aria-live="polite" className="flex items-start gap-3 rounded-2xl border border-[#665338] bg-[#2b241a]/95 p-4 text-sm text-[#e8ddc9] shadow-lg"><span className="mt-0.5 text-lg text-[#d5b678]">♟</span><span>{getStatusText(statusMessage, text)}</span></div>}
