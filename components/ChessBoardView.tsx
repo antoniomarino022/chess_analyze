@@ -200,7 +200,13 @@ const PIECE_SVGS: Record<string, React.ReactNode> = {
   ),
 };
 
-export function ChessBoardView({ fen, lastMoveUci, flipped = false }: ChessBoardViewProps) {
+export function ChessBoardView({
+  fen,
+  lastMoveUci,
+  flipped = false,
+  arrows = [],
+  highlightSquares = [],
+}: ChessBoardViewProps) {
   const board = useMemo(() => {
     try {
       const chess = new Chess(fen);
@@ -221,8 +227,29 @@ export function ChessBoardView({ fen, lastMoveUci, flipped = false }: ChessBoard
     ? [1, 2, 3, 4, 5, 6, 7, 8]
     : [8, 7, 6, 5, 4, 3, 2, 1];
 
+  // Helper per convertire il nome casella ("e4") in coordinate percentuali centro [0-100%]
+  const getSquareCenter = (sq: string) => {
+    if (!sq || sq.length < 2) return { x: 50, y: 50 };
+    const f = sq[0].toLowerCase();
+    const r = parseInt(sq[1], 10);
+    const colIdx = files.indexOf(f);
+    const rowIdx = ranks.indexOf(r);
+    if (colIdx === -1 || rowIdx === -1) return { x: 50, y: 50 };
+    return {
+      x: colIdx * 12.5 + 6.25,
+      y: rowIdx * 12.5 + 6.25,
+    };
+  };
+
+  const arrowColors: Record<string, string> = {
+    green: "rgba(34, 197, 94, 0.88)",
+    red: "rgba(239, 68, 68, 0.88)",
+    blue: "rgba(59, 130, 246, 0.88)",
+    yellow: "rgba(234, 179, 8, 0.88)",
+  };
+
   return (
-    <div className="w-full max-w-[min(88vw,440px)] sm:max-w-[440px] aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_20px_55px_rgba(0,0,0,.42)] border-[5px] border-[#a37a42] bg-[#315640] ring-1 ring-[#e6d4b5]/20 select-none transition-shadow duration-300">
+    <div className="relative w-full max-w-[min(88vw,440px)] sm:max-w-[440px] aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_20px_55px_rgba(0,0,0,.42)] border-[5px] border-[#a37a42] bg-[#315640] ring-1 ring-[#e6d4b5]/20 select-none transition-shadow duration-300">
       <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
         {ranks.map((rank, rankIdx) =>
           files.map((file, fileIdx) => {
@@ -233,14 +260,23 @@ export function ChessBoardView({ fen, lastMoveUci, flipped = false }: ChessBoard
             const realCol = file.charCodeAt(0) - 97;
             const piece = board[realRow] ? board[realRow][realCol] : null;
 
-            // Caselle in feltro verde e avorio, coordinate coordinate con il tema dell'app.
+            // Caselle in feltro verde e avorio, coordinate con il tema dell'app.
             const isDark = (realRow + realCol) % 2 === 1;
             const isHighlight =
               squareName === fromSquare || squareName === toSquare;
 
+            const specialHighlight = highlightSquares.find((h) => h.square === squareName);
+
             let bgStyle = isDark ? "bg-[#477653]" : "bg-[#e6d4b5]";
             if (isHighlight) {
               bgStyle = isDark ? "bg-[#a9a64f]" : "bg-[#f0d88f]";
+            }
+            if (specialHighlight) {
+              if (specialHighlight.color === "red") {
+                bgStyle = "bg-[#b93838]/85 ring-inset ring-2 ring-[#e53e3e]";
+              } else if (specialHighlight.color === "yellow") {
+                bgStyle = "bg-[#d69e2e]/75 ring-inset ring-2 ring-[#ecc94b]";
+              }
             }
 
             const pieceKey = piece
@@ -283,6 +319,48 @@ export function ChessBoardView({ fen, lastMoveUci, flipped = false }: ChessBoard
           })
         )}
       </div>
+
+      {/* Overlay SVG Frecce Tattiche del Coach */}
+      {arrows.length > 0 && (
+        <svg
+          viewBox="0 0 100 100"
+          className="pointer-events-none absolute inset-0 h-full w-full z-20 drop-shadow-md"
+        >
+          <defs>
+            {Object.entries(arrowColors).map(([name, color]) => (
+              <marker
+                key={name}
+                id={`arrowhead-${name}`}
+                markerWidth="3.5"
+                markerHeight="3.5"
+                refX="2.5"
+                refY="1.75"
+                orient="auto"
+              >
+                <polygon points="0 0, 3.5 1.75, 0 3.5" fill={color} />
+              </marker>
+            ))}
+          </defs>
+          {arrows.map((arr, idx) => {
+            const start = getSquareCenter(arr.from);
+            const end = getSquareCenter(arr.to);
+            const colorCode = arrowColors[arr.color] || arrowColors.green;
+            return (
+              <line
+                key={idx}
+                x1={start.x}
+                y1={start.y}
+                x2={end.x}
+                y2={end.y}
+                stroke={colorCode}
+                strokeWidth="2.8"
+                strokeLinecap="round"
+                markerEnd={`url(#arrowhead-${arr.color})`}
+              />
+            );
+          })}
+        </svg>
+      )}
     </div>
   );
 }

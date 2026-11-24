@@ -14,10 +14,18 @@ export interface GameReplayModalProps {
   onClose: () => void;
 }
 
+export interface ChessBoardArrow {
+  from: string;
+  to: string;
+  color: "green" | "red" | "blue" | "yellow";
+}
+
 export interface ChessBoardViewProps {
   fen: string;
   lastMoveUci?: string;
   flipped?: boolean;
+  arrows?: ChessBoardArrow[];
+  highlightSquares?: { square: string; color: "red" | "yellow" }[];
 }
 
 export interface CoachAvatarProps {
