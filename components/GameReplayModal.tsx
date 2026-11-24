@@ -6,7 +6,8 @@ import { CoachAvatar } from "./CoachAvatar";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { useLanguage } from "./LanguageProvider";
 import { messages } from "@/lib/i18n";
-import type { AnalyzedMove, CoachMood, GameReplayModalProps, MoveClassification } from "@/types";
+import { generateCoachFeedback, uciToSan } from "@/lib/chess/coach-feedback";
+import type { AnalyzedMove, CoachMood, GameReplayModalProps, MoveClassification, ChessBoardArrow } from "@/types";
 
 const CLASSIFICATION_CONFIG: Record<MoveClassification, { badgeColor: string; icon: string }> = {
   brilliant: { badgeColor: "bg-[#596e4b]/30 text-[#d4dfb9] border-[#78905f]/50", icon: "!!" },
@@ -52,19 +53,65 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
   const classification = currentMove?.classification;
   const moveConfig = classification ? CLASSIFICATION_CONFIG[classification] : null;
   const moveText = classification ? text.classification[classification] : null;
-  const coachComment = currentMove ? moveText?.comment || text.moveRecorded : "";
-  const coachMood: CoachMood = useMemo(() => {
-    if (!classification) return "neutral";
-    if (classification === "brilliant") return "proud";
-    if (classification === "best" || classification === "great" || classification === "excellent") return "happy";
-    if (classification === "inaccuracy") return "thinking";
-    if (classification === "mistake" || classification === "blunder" || classification === "missed_win") return "shocked";
-    return "neutral";
-  }, [classification]);
-
-  const moveButton = "flex h-12 min-w-12 items-center justify-center gap-1 rounded-xl border border-[#665238] bg-[#403321] px-3 text-xs font-bold text-[#f0dfbd] transition hover:bg-[#59452b] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 sm:text-sm";
   const userColor = game.userColor as "white" | "black" | null | undefined;
   const isFlipped = userColor === "black";
+
+  // Calcolo intelligente del feedback e delle frecce tattiche del coach
+  const feedback = useMemo(() => {
+    return generateCoachFeedback(currentMove, userColor, language);
+  }, [currentMove, userColor, language]);
+
+  const coachComment = feedback.comment;
+  const coachMood: CoachMood = feedback.mood;
+
+  // Costruzione frecce visive (verde = mossa raccomandata, rossa/gialla = mossa giocata se errata)
+  const boardArrows = useMemo((): ChessBoardArrow[] => {
+    if (!currentMove) return [];
+    const arrows: ChessBoardArrow[] = [];
+
+    // Se c'è una mossa migliore differente (es. inesattezza, errore, blunder), mostrala in VERDE
+    if (feedback.bestMoveUci && feedback.bestMoveUci.length >= 4) {
+      arrows.push({
+        from: feedback.bestMoveUci.slice(0, 2),
+        to: feedback.bestMoveUci.slice(2, 4),
+        color: "green",
+      });
+    }
+
+    // Se la mossa giocata è un blunder o mistake, evidenzia la traiettoria giocata in ROSSO
+    if (classification === "blunder" || classification === "mistake") {
+      if (currentMove.uci && currentMove.uci.length >= 4) {
+        arrows.push({
+          from: currentMove.uci.slice(0, 2),
+          to: currentMove.uci.slice(2, 4),
+          color: "red",
+        });
+      }
+    } else if (classification === "brilliant" || classification === "best") {
+      // Se è brillante o best move, la freccia della mossa giocata è VERDE
+      if (currentMove.uci && currentMove.uci.length >= 4) {
+        arrows.push({
+          from: currentMove.uci.slice(0, 2),
+          to: currentMove.uci.slice(2, 4),
+          color: "green",
+        });
+      }
+    }
+
+    return arrows;
+  }, [currentMove, feedback.bestMoveUci, classification]);
+
+  const highlightSquares = useMemo(() => {
+    if (!feedback.threatSquare) return [];
+    return [{ square: feedback.threatSquare, color: "red" as const }];
+  }, [feedback.threatSquare]);
+
+  const bestMoveSan = useMemo(() => {
+    if (!currentMove?.bestMove) return "";
+    return uciToSan(currentMove.fenBefore, currentMove.bestMove);
+  }, [currentMove]);
+
+  const moveButton = "flex h-12 min-w-12 items-center justify-center gap-1 rounded-xl border border-[#665238] bg-[#403321] px-3 text-xs font-bold text-[#f0dfbd] transition hover:bg-[#59452b] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 sm:text-sm";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-[#100e0b]/85 p-0 backdrop-blur-md sm:items-center sm:p-4">
@@ -107,7 +154,13 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
 
         <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto p-3 sm:gap-6 sm:p-5 md:grid-cols-12 md:p-6">
           <section className="flex min-w-0 flex-col items-center justify-start gap-3 sm:gap-4 md:col-span-7 md:justify-center" aria-label={text.boardAndControls}>
-            <ChessBoardView fen={currentFen} lastMoveUci={currentMove?.uci} flipped={isFlipped}/>
+            <ChessBoardView
+              fen={currentFen}
+              lastMoveUci={currentMove?.uci}
+              flipped={isFlipped}
+              arrows={boardArrows}
+              highlightSquares={highlightSquares}
+            />
             <nav className="flex w-full max-w-[440px] items-center justify-between gap-1 rounded-2xl border border-[#4b3c29] bg-[#171511]/75 p-1.5 sm:justify-center sm:gap-2 sm:p-2" aria-label={text.moveNavigation}>
               <button onClick={() => setCurrentStep(0)} disabled={currentStep === 0} className="grid h-12 min-w-12 place-items-center rounded-xl bg-[#30271c] px-2 text-base text-[#e4d4b7] transition hover:bg-[#493a27] disabled:cursor-not-allowed disabled:opacity-30" title={text.startGame} aria-label={text.startGame}>«</button>
               <button onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))} disabled={currentStep === 0} className={moveButton} title={text.previousMove} aria-label={text.previousMove}><span aria-hidden="true">←</span><span className="hidden sm:inline">{text.previous}</span></button>
@@ -131,7 +184,17 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
                 {moveConfig && moveText && <span className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold sm:text-xs ${moveConfig.badgeColor}`}><span>{moveConfig.icon}</span><span>{moveText.label}</span></span>}
               </div>
               <div className="space-y-2 rounded-xl border border-[#453a2a] bg-[#252018] p-3 text-xs leading-relaxed text-[#c7beae] sm:p-3.5"><div className="flex items-center gap-1.5 font-semibold text-[#c8d9a9]"><span>♞</span> {text.coach}:</div><p className="italic text-[#eee4d2]">{coachComment}</p></div>
-              {classification !== "best" && currentMove.bestMove && <div className="flex items-center justify-between gap-3 rounded-xl border border-[#55704b]/50 bg-[#315640]/20 p-2.5 text-xs text-[#b8b09e]"><span>{text.recommendedMove}</span><span className="font-mono font-bold text-[#c6d9ad]">{currentMove.bestMove}</span></div>}
+              {classification !== "best" && currentMove.bestMove && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-[#55704b]/50 bg-[#315640]/20 p-2.5 text-xs text-[#b8b09e]">
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block h-2 w-2 rounded-full bg-green-500"></span>
+                    {text.recommendedMove}
+                  </span>
+                  <span className="font-mono font-bold text-[#c6d9ad]">
+                    {bestMoveSan ? `${bestMoveSan} (${currentMove.bestMove})` : currentMove.bestMove}
+                  </span>
+                </div>
+              )}
             </div> : <div className="rounded-2xl border border-[#4b3c29] bg-[#171511]/75 px-4 py-6 text-center text-xs text-[#aaa294]">{text.startingPosition} <strong className="text-[#e6d4b5]">{text.pressNext} {text.next} ›</strong> {text.toSeeFirstMove}</div>}
 
             <div className="max-h-52 flex-1 overflow-y-auto rounded-2xl border border-[#4b3c29] bg-[#171511]/75 p-3 sm:max-h-72">
