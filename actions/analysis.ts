@@ -1,5 +1,7 @@
 "use server";
 
+export const maxDuration = 60; // Consente fino a 60 secondi su Vercel Serverless
+
 import { db } from "@/db";
 import { analyses, games } from "@/db/schema";
 import { eq } from "drizzle-orm";

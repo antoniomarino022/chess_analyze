@@ -47,7 +47,8 @@ function classifyMove(
 
 
 /**
- * Esegue l'analisi completa di una partita posizione per posizione
+ * Esegue l'analisi completa di una partita posizione per posizione.
+ * Calcola una profondità dinamica per garantire che l'esecuzione rientri nei limiti di tempo di Vercel.
  */
 export async function analyzeGamePgn(
   pgn: string,
@@ -55,6 +56,32 @@ export async function analyzeGamePgn(
   onProgress?: (current: number, total: number) => void
 ): Promise<GameAnalysisResult> {
   const parsed: ParsedPgnResult = parsePgn(pgn);
+
+  if (!parsed.moves || parsed.moves.length === 0) {
+    const emptySummary: AnalysisSummary = {
+      whiteAccuracy: 100,
+      blackAccuracy: 100,
+      whiteStats: { best: 0, excellent: 0, good: 0, inaccuracies: 0, mistakes: 0, blunders: 0 },
+      blackStats: { best: 0, excellent: 0, good: 0, inaccuracies: 0, mistakes: 0, blunders: 0 },
+    };
+    return {
+      depth,
+      whiteAccuracy: 100,
+      blackAccuracy: 100,
+      summary: emptySummary,
+      movesData: [],
+    };
+  }
+
+  // Se la partita ha molte semimosse, adattiamo la profondità per evitare timeout serverless
+  // Esempio: > 60 semimosse (30 mosse intere) depth 4, altrimenti depth 5-6
+  let effectiveDepth = depth;
+  if (parsed.moves.length > 70) {
+    effectiveDepth = Math.min(depth, 4);
+  } else if (parsed.moves.length > 40) {
+    effectiveDepth = Math.min(depth, 5);
+  }
+
   const engine = new StockfishEngine();
   await engine.init();
 
@@ -94,11 +121,11 @@ export async function analyzeGamePgn(
       if (lastEval && lastEval.fen === move.fenBefore) {
         evalBefore = lastEval.evaluation;
       } else {
-        evalBefore = await engine.evaluateFen(move.fenBefore, depth);
+        evalBefore = await engine.evaluateFen(move.fenBefore, effectiveDepth);
       }
 
       // Valutazione posizione DOPO la mossa giocata
-      const evalAfter = await engine.evaluateFen(move.fenAfter, depth);
+      const evalAfter = await engine.evaluateFen(move.fenAfter, effectiveDepth);
       lastEval = { fen: move.fenAfter, evaluation: evalAfter };
 
       const isWhite = move.color === "white";
@@ -173,7 +200,7 @@ export async function analyzeGamePgn(
   };
 
   return {
-    depth,
+    depth: effectiveDepth,
     whiteAccuracy: avgWhiteAccuracy,
     blackAccuracy: avgBlackAccuracy,
     summary,

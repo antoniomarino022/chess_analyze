@@ -91,7 +91,7 @@ export class StockfishEngine {
       const timeout = setTimeout(() => {
         this.sendCommand("stop");
         reject(new Error(`Timeout durante l'analisi FEN: ${fen}`));
-      }, 15000);
+      }, 5000);
 
       this.sandbox.postMessage = (line: string) => {
         if (typeof line !== "string") return;
