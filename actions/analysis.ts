@@ -22,6 +22,47 @@ export async function getAnalysisByGameId(
 }
 
 /**
+ * Salva a DB i risultati di un'analisi calcolata dal client.
+ */
+export async function saveAnalysisResult(
+  gameId: string,
+  analysisResult: GameAnalysisResult
+): Promise<{ analysis: Analysis; isExisting: boolean }> {
+  const whiteAcc = Number.isFinite(analysisResult.whiteAccuracy)
+    ? analysisResult.whiteAccuracy.toFixed(2)
+    : "100.00";
+  const blackAcc = Number.isFinite(analysisResult.blackAccuracy)
+    ? analysisResult.blackAccuracy.toFixed(2)
+    : "100.00";
+
+  const newAnalysis: NewAnalysis = {
+    gameId,
+    depth: analysisResult.depth,
+    whiteAccuracy: whiteAcc,
+    blackAccuracy: blackAcc,
+    summary: analysisResult.summary || {},
+    movesData: analysisResult.movesData || [],
+  };
+
+  const [saved] = await db
+    .insert(analyses)
+    .values(newAnalysis)
+    .onConflictDoUpdate({
+      target: analyses.gameId,
+      set: {
+        depth: newAnalysis.depth,
+        whiteAccuracy: newAnalysis.whiteAccuracy,
+        blackAccuracy: newAnalysis.blackAccuracy,
+        summary: newAnalysis.summary,
+        movesData: newAnalysis.movesData,
+      },
+    })
+    .returning();
+
+  return { analysis: saved, isExisting: false };
+}
+
+/**
  * Esegue l'analisi Stockfish e la persiste nella tabella `analyses`.
  * Se l'analisi per questa partita esiste già, la restituisce senza ricalcolarla.
  */

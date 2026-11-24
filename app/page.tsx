@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { importRecentGames } from "@/actions/import";
-import { analyzeAndSaveGame } from "@/actions/analysis";
+import { saveAnalysisResult } from "@/actions/analysis";
+import { analyzePgnInBrowser, type ClientAnalyzerProgress } from "@/lib/stockfish/client-analyzer";
 import { GameReplayModal } from "@/components/GameReplayModal";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -33,6 +34,7 @@ export default function Home() {
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzingGameId, setAnalyzingGameId] = useState<string | null>(null);
+  const [analysisProgress, setAnalysisProgress] = useState<number>(0);
   const [statusMessage, setStatusMessage] = useState<HomeStatus | null>(null);
   const [gamesList, setGamesList] = useState<GameItem[]>([]);
   const [selectedGameForReplay, setSelectedGameForReplay] = useState<GameItem | null>(null);
@@ -52,17 +54,27 @@ export default function Home() {
     } finally { setLoading(false); }
   };
 
-  const handleAnalyzeGame = async (gameId: string) => {
+  const handleAnalyzeGame = async (gameId: string, pgn: string) => {
     setAnalyzingGameId(gameId);
+    setAnalysisProgress(0);
     setStatusMessage({ type: "analyzing" });
     try {
-      const res = await analyzeAndSaveGame(gameId, 6);
+      // Analisi Stockfish in-browser (supporta qualsiasi lunghezza mossa per mossa)
+      const analysisResult = await analyzePgnInBrowser(pgn, 8, (p) => {
+        setAnalysisProgress(p.percent);
+      });
+
+      // Salvataggio istantaneo a database
+      const res = await saveAnalysisResult(gameId, analysisResult);
       setGamesList((prev) => prev.map((item) => item.game.id === gameId ? { ...item, analysis: res.analysis } : item));
       setStatusMessage({ type: "analysisDone" });
     } catch (err: unknown) {
       console.error(err);
       setStatusMessage({ type: "analysisFailed" });
-    } finally { setAnalyzingGameId(null); }
+    } finally {
+      setAnalyzingGameId(null);
+      setAnalysisProgress(0);
+    }
   };
 
   const inputClass = "w-full rounded-xl border border-[#504432] bg-[#171511]/80 px-4 py-3 text-sm text-[#f4eee2] placeholder:text-[#777064] transition focus:border-[#bd985d] focus:bg-[#171511] focus:outline-none";
@@ -165,7 +177,7 @@ export default function Home() {
                   <p className="mt-1 text-xs text-[#a9a091]">{text.result} <span className="font-mono text-[#eee2cc]">{game.result || text.unknown}</span><span className="mx-2 text-[#655a49]">·</span>{game.playedAt ? new Date(game.playedAt).toLocaleDateString(language === "it" ? "it-IT" : "en-US") : text.dateUnavailable}</p>
                 </div>
               </div>
-                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{analysis ? <><div className="flex flex-1 items-center gap-4 rounded-xl border border-[#4d4231] bg-[#171511]/70 px-3 py-2 sm:flex-none"><div><span className="block text-[9px] font-bold uppercase tracking-wider text-[#918777]">{text.white}{userColor === "white" ? ` (${text.you})` : ""}</span><span className="text-sm font-bold text-[#e5d0a6]">{analysis.whiteAccuracy}%</span></div><span className="h-7 w-px bg-[#4d4231]"/><div><span className="block text-[9px] font-bold uppercase tracking-wider text-[#918777]">{text.black}{userColor === "black" ? ` (${text.you})` : ""}</span><span className="text-sm font-bold text-[#b8c99a]">{analysis.blackAccuracy}%</span></div></div><button onClick={() => setSelectedGameForReplay(item)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#46714e] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#56875e] sm:flex-none"><span>♞</span>{text.reviewGame}</button></> : <button onClick={() => handleAnalyzeGame(game.id)} disabled={isAnalyzing || Boolean(analyzingGameId)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#5b4a31] bg-[#30271c] px-4 py-3 text-xs font-bold text-[#ebd6af] transition hover:border-[#a5814c] hover:bg-[#3e3020] disabled:cursor-wait disabled:opacity-55 sm:w-auto">{isAnalyzing ? <><span className="animate-spin">◌</span>{text.analyzingGame}</> : <>♙ {text.analyzeGame}</>}</button>}</div>
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{analysis ? <><div className="flex flex-1 items-center gap-4 rounded-xl border border-[#4d4231] bg-[#171511]/70 px-3 py-2 sm:flex-none"><div><span className="block text-[9px] font-bold uppercase tracking-wider text-[#918777]">{text.white}{userColor === "white" ? ` (${text.you})` : ""}</span><span className="text-sm font-bold text-[#e5d0a6]">{analysis.whiteAccuracy}%</span></div><span className="h-7 w-px bg-[#4d4231]"/><div><span className="block text-[9px] font-bold uppercase tracking-wider text-[#918777]">{text.black}{userColor === "black" ? ` (${text.you})` : ""}</span><span className="text-sm font-bold text-[#b8c99a]">{analysis.blackAccuracy}%</span></div></div><button onClick={() => setSelectedGameForReplay(item)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#46714e] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#56875e] sm:flex-none"><span>♞</span>{text.reviewGame}</button></> : <button onClick={() => handleAnalyzeGame(game.id, game.pgn)} disabled={isAnalyzing || Boolean(analyzingGameId)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#5b4a31] bg-[#30271c] px-4 py-3 text-xs font-bold text-[#ebd6af] transition hover:border-[#a5814c] hover:bg-[#3e3020] disabled:cursor-wait disabled:opacity-55 sm:w-auto">{isAnalyzing ? <><span className="animate-spin">◌</span>{text.analyzingGame} {analysisProgress > 0 && `(${analysisProgress}%)`}</> : <>♙ {text.analyzeGame}</>}</button>}</div>
               </div>
               {Boolean(analysis?.summary) && <details className="mt-4 border-t border-[#463a2a] pt-3"><summary className="cursor-pointer text-xs font-semibold text-[#c6b897] transition hover:text-white">{text.moveStats} <span className="ml-1 text-[#998567]">↓</span></summary><div className="mt-3 grid grid-cols-2 gap-3">{(["white", "black"] as const).map((side) => { const stats = (analysis?.summary as Record<string, Record<string, number>> | null)?.[`${side}Stats`]; return <div key={side} className="rounded-xl border border-[#443927] bg-[#171511]/60 p-3"><div className="mb-2 text-xs font-bold text-[#e1d1b3]">{side === "white" ? text.white : text.black}{userColor === side ? ` (${text.you})` : ""}</div><div className="space-y-1 text-xs text-[#aaa294]"><div>{text.best} <span className="float-right text-[#c6d39f]">{String(stats?.best ?? 0)}</span></div><div>{text.inaccuracies} <span className="float-right text-[#d7c479]">{String(stats?.inaccuracies ?? 0)}</span></div><div>{text.mistakes} <span className="float-right text-[#d69b65]">{String(stats?.mistakes ?? 0)}</span></div><div>{text.blunders} <span className="float-right text-[#ce8176]">{String(stats?.blunders ?? 0)}</span></div></div></div>; })}</div></details>}
             </article>;
