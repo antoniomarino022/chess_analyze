@@ -63,14 +63,41 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
   }, [classification]);
 
   const moveButton = "flex h-12 min-w-12 items-center justify-center gap-1 rounded-xl border border-[#665238] bg-[#403321] px-3 text-xs font-bold text-[#f0dfbd] transition hover:bg-[#59452b] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 sm:text-sm";
+  const userColor = game.userColor as "white" | "black" | null | undefined;
+  const isFlipped = userColor === "black";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-[#100e0b]/85 p-0 backdrop-blur-md sm:items-center sm:p-4">
       <div className="flex max-h-[96dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[1.75rem] border border-[#665238] bg-[#211c16] shadow-2xl shadow-black/50 sm:max-h-[92vh] sm:rounded-[1.75rem]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#4b3c29] bg-[#171511]/65 px-4 py-3 sm:px-6 sm:py-4">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 text-base font-bold text-[#f0e8d9] sm:text-lg"><span className="text-[#c5a367]">♞</span><span className="truncate">{game.whitePlayer || text.white} {messages[language].home.versus} {game.blackPlayer || text.black}</span></h2>
-            <p className="mt-1 text-[11px] text-[#aaa294] sm:text-xs">{game.result || messages[language].home.unknown}<span className="mx-2 text-[#655a49]">·</span>{text.accuracy}: <span className="font-semibold text-[#e5d0a6]">{analysis.whiteAccuracy}% ({text.white.slice(0, 1)})</span> vs <span className="font-semibold text-[#b8c99a]">{analysis.blackAccuracy}% ({text.black.slice(0, 1)})</span></p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="flex items-center gap-2 text-base font-bold text-[#f0e8d9] sm:text-lg">
+                <span className="text-[#c5a367]">♞</span>
+                <span className="truncate">
+                  <span className={userColor === "white" ? "font-extrabold text-[#f3eedd] underline decoration-[#c5a367]/60 underline-offset-4" : ""}>
+                    {game.whitePlayer || text.white}
+                    {userColor === "white" && <span className="ml-1 text-xs text-[#e5d0a6]">({text.you})</span>}
+                  </span>
+                  {" "}{messages[language].home.versus}{" "}
+                  <span className={userColor === "black" ? "font-extrabold text-[#f3eedd] underline decoration-[#c5a367]/60 underline-offset-4" : ""}>
+                    {game.blackPlayer || text.black}
+                    {userColor === "black" && <span className="ml-1 text-xs text-[#d6b776]">({text.you})</span>}
+                  </span>
+                </span>
+              </h2>
+              {userColor && (
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide border ${
+                  userColor === "white"
+                    ? "border-[#c5a367]/40 bg-[#f4eee2]/10 text-[#f5eedd]"
+                    : "border-[#524433] bg-[#14120e] text-[#d6c7ae]"
+                }`}>
+                  <span className={`inline-block h-2 w-2 rounded-full border ${userColor === "white" ? "bg-white border-black/30" : "bg-[#1c1917] border-white/40"}`} />
+                  {userColor === "white" ? text.youPlayWhite : text.youPlayBlack}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-[11px] text-[#aaa294] sm:text-xs">{game.result || messages[language].home.unknown}<span className="mx-2 text-[#655a49]">·</span>{text.accuracy}: <span className="font-semibold text-[#e5d0a6]">{analysis.whiteAccuracy}% ({text.white.slice(0, 1)}{userColor === "white" ? ` - ${text.you}` : ""})</span> vs <span className="font-semibold text-[#b8c99a]">{analysis.blackAccuracy}% ({text.black.slice(0, 1)}{userColor === "black" ? ` - ${text.you}` : ""})</span></p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <LanguageSwitch/>
@@ -80,7 +107,7 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
 
         <div className="grid flex-1 grid-cols-1 gap-5 overflow-y-auto p-3 sm:gap-6 sm:p-5 md:grid-cols-12 md:p-6">
           <section className="flex min-w-0 flex-col items-center justify-start gap-3 sm:gap-4 md:col-span-7 md:justify-center" aria-label={text.boardAndControls}>
-            <ChessBoardView fen={currentFen} lastMoveUci={currentMove?.uci}/>
+            <ChessBoardView fen={currentFen} lastMoveUci={currentMove?.uci} flipped={isFlipped}/>
             <nav className="flex w-full max-w-[440px] items-center justify-between gap-1 rounded-2xl border border-[#4b3c29] bg-[#171511]/75 p-1.5 sm:justify-center sm:gap-2 sm:p-2" aria-label={text.moveNavigation}>
               <button onClick={() => setCurrentStep(0)} disabled={currentStep === 0} className="grid h-12 min-w-12 place-items-center rounded-xl bg-[#30271c] px-2 text-base text-[#e4d4b7] transition hover:bg-[#493a27] disabled:cursor-not-allowed disabled:opacity-30" title={text.startGame} aria-label={text.startGame}>«</button>
               <button onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))} disabled={currentStep === 0} className={moveButton} title={text.previousMove} aria-label={text.previousMove}><span aria-hidden="true">←</span><span className="hidden sm:inline">{text.previous}</span></button>
@@ -94,7 +121,15 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
           <section className="flex min-w-0 flex-col gap-3 sm:gap-4 md:col-span-5" aria-label={text.commentsAndMoves}>
             <CoachAvatar mood={coachMood}/>
             {currentMove ? <div className="space-y-3 rounded-2xl border border-[#4b3c29] bg-[#171511]/75 p-3.5 sm:p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="text-xs font-bold text-[#e6d9c3] sm:text-sm">{text.move} {currentMove.moveNumber} ({currentMove.color === "white" ? text.white : text.black}):</span><span className="font-mono text-lg font-extrabold text-[#f4eee2]">{currentMove.san}</span></div>{moveConfig && moveText && <span className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold sm:text-xs ${moveConfig.badgeColor}`}><span>{moveConfig.icon}</span><span>{moveText.label}</span></span>}</div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#e6d9c3] sm:text-sm">
+                    {text.move} {currentMove.moveNumber} ({currentMove.color === "white" ? text.white : text.black}{userColor === currentMove.color ? ` - ${text.you}` : ""}):
+                  </span>
+                  <span className="font-mono text-lg font-extrabold text-[#f4eee2]">{currentMove.san}</span>
+                </div>
+                {moveConfig && moveText && <span className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold sm:text-xs ${moveConfig.badgeColor}`}><span>{moveConfig.icon}</span><span>{moveText.label}</span></span>}
+              </div>
               <div className="space-y-2 rounded-xl border border-[#453a2a] bg-[#252018] p-3 text-xs leading-relaxed text-[#c7beae] sm:p-3.5"><div className="flex items-center gap-1.5 font-semibold text-[#c8d9a9]"><span>♞</span> {text.coach}:</div><p className="italic text-[#eee4d2]">{coachComment}</p></div>
               {classification !== "best" && currentMove.bestMove && <div className="flex items-center justify-between gap-3 rounded-xl border border-[#55704b]/50 bg-[#315640]/20 p-2.5 text-xs text-[#b8b09e]"><span>{text.recommendedMove}</span><span className="font-mono font-bold text-[#c6d9ad]">{currentMove.bestMove}</span></div>}
             </div> : <div className="rounded-2xl border border-[#4b3c29] bg-[#171511]/75 px-4 py-6 text-center text-xs text-[#aaa294]">{text.startingPosition} <strong className="text-[#e6d4b5]">{text.pressNext} {text.next} ›</strong> {text.toSeeFirstMove}</div>}
