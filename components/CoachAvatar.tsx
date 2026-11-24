@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import type { CoachMood } from "@/types";
 
 interface CoachAvatarProps {
@@ -9,160 +8,53 @@ interface CoachAvatarProps {
   name?: string;
 }
 
-export function CoachAvatar({
-  mood,
-  isSpeaking,
-  name = "Maestro Denis",
-}: CoachAvatarProps) {
-  // Configurazione espressione facciale dinamica stile Chess.com Game Review
-  const moodConfig: Record<
-    CoachMood,
-    { label: string; eyebrowD: string; mouthD: string; eyeY: number; bgAccent: string }
-  > = {
-    // Orgoglioso / Brillante
-    proud: {
-      label: "Impressionato",
-      eyebrowD: "M 18 29 Q 24 24 30 28 M 50 28 Q 56 24 62 29",
-      mouthD: "M 28 58 Q 40 70 52 58",
-      eyeY: 34,
-      bgAccent: "from-cyan-500/20 to-emerald-500/10 border-cyan-500/40",
-    },
-    // Felice / Mossa migliore
-    happy: {
-      label: "Soddisfatto",
-      eyebrowD: "M 20 28 Q 25 24 30 27 M 50 27 Q 55 24 60 28",
-      mouthD: "M 30 57 Q 40 67 50 57",
-      eyeY: 34,
-      bgAccent: "from-emerald-500/20 to-teal-500/10 border-emerald-500/40",
-    },
-    // Neutro / Mossa da libro o buona
-    neutral: {
-      label: "Attento",
-      eyebrowD: "M 20 28 L 30 28 M 50 28 L 60 28",
-      mouthD: "M 32 59 Q 40 60 48 59",
-      eyeY: 35,
-      bgAccent: "from-zinc-800 to-zinc-900 border-zinc-700",
-    },
-    // Inesattezza / Pensieroso
-    thinking: {
-      label: "Perplesso",
-      eyebrowD: "M 20 26 Q 25 29 30 28 M 50 26 Q 55 23 60 27",
-      mouthD: "M 33 60 Q 40 56 47 60",
-      eyeY: 35,
-      bgAccent: "from-yellow-500/20 to-amber-500/10 border-yellow-500/40",
-    },
-    // Errore / Blunder / Shock
-    shocked: {
-      label: "Inorridito (Blunder!)",
-      eyebrowD: "M 18 24 Q 24 29 30 31 M 50 31 Q 56 29 62 24",
-      mouthD: "M 33 56 A 7 9 0 0 0 47 56 A 7 9 0 0 0 33 56",
-      eyeY: 36,
-      bgAccent: "from-red-500/20 to-rose-500/10 border-red-500/40",
-    },
-  };
+const moodConfig: Record<CoachMood, { label: string; brow: string; mouth: string; eyeY: number; accent: string }> = {
+  proud: { label: "Impressionato", brow: "M 19 28 Q 24 23 30 27 M 50 27 Q 56 23 61 28", mouth: "M 29 56 Q 40 68 51 56", eyeY: 35, accent: "text-amber-200" },
+  happy: { label: "Soddisfatto", brow: "M 19 28 Q 24 24 30 27 M 50 27 Q 56 24 61 28", mouth: "M 30 56 Q 40 66 50 56", eyeY: 35, accent: "text-amber-200" },
+  neutral: { label: "Attento", brow: "M 19 28 L 30 28 M 50 28 L 61 28", mouth: "M 32 58 Q 40 59 48 58", eyeY: 36, accent: "text-stone-200" },
+  thinking: { label: "In riflessione", brow: "M 19 27 Q 24 30 30 28 M 50 26 Q 56 23 61 27", mouth: "M 33 59 Q 40 55 47 59", eyeY: 36, accent: "text-yellow-200" },
+  shocked: { label: "Colpo di scena!", brow: "M 19 24 Q 24 29 30 31 M 50 31 Q 56 29 61 24", mouth: "M 34 55 A 6 8 0 1 0 46 55 A 6 8 0 1 0 34 55", eyeY: 37, accent: "text-rose-200" },
+};
 
-  const current = moodConfig[mood] || moodConfig.neutral;
+export function CoachAvatar({ mood, isSpeaking, name = "Maestro Denis" }: CoachAvatarProps) {
+  const current = moodConfig[mood] ?? moodConfig.neutral;
 
   return (
-    <div
-      className={`flex items-center gap-3.5 p-3 rounded-2xl border bg-gradient-to-br transition-all duration-300 shadow-md ${current.bgAccent}`}
-    >
-      {/* Avatar Rotondo Stile Chess.com Game Review */}
+    <div className="coach-card group flex items-center gap-4 rounded-2xl border border-[#5d4932] bg-[#211b15] p-3.5 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-0.5 hover:border-[#b88a4a]">
       <div className="relative shrink-0">
-        <div
-          className={`w-14 h-14 rounded-full overflow-hidden border-2 bg-[#2b2b2b] flex items-center justify-center transition-all ${
-            isSpeaking
-              ? "border-emerald-400 ring-4 ring-emerald-500/30 scale-105"
-              : "border-zinc-600"
-          }`}
-        >
-          <svg viewBox="0 0 80 80" className="w-full h-full">
-            {/* Sfondo cerchio testa */}
-            <circle cx="40" cy="40" r="38" fill="#e8c89b" />
-
-            {/* Capelli / Berretto da coach scacchi */}
-            <path
-              d="M 12 30 Q 40 8 68 30 Q 64 16 40 14 Q 16 16 12 30 Z"
-              fill="#2d3748"
-            />
-            {/* Baffi da Maestro di Scacchi */}
-            <path
-              d="M 28 52 Q 40 55 40 51 Q 40 55 52 52 Q 45 48 40 50 Q 35 48 28 52 Z"
-              fill="#2d3748"
-            />
-
-            {/* Sopracciglia dinamiche */}
-            <path
-              d={current.eyebrowD}
-              stroke="#2d3748"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-              fill="none"
-              className="transition-all duration-300"
-            />
-
-            {/* Occhi con riflesso */}
-            <circle cx="25" cy={current.eyeY} r="3.5" fill="#1a202c" />
-            <circle cx="26" cy={current.eyeY - 1} r="1" fill="#ffffff" />
-            <circle cx="55" cy={current.eyeY} r="3.5" fill="#1a202c" />
-            <circle cx="56" cy={current.eyeY - 1} r="1" fill="#ffffff" />
-
-            {/* Occhiali tondi da coach */}
-            <circle
-              cx="25"
-              cy={current.eyeY}
-              r="7.5"
-              stroke="#4a5568"
-              strokeWidth="1.8"
-              fill="none"
-            />
-            <circle
-              cx="55"
-              cy={current.eyeY}
-              r="7.5"
-              stroke="#4a5568"
-              strokeWidth="1.8"
-              fill="none"
-            />
-            <path d="M 32.5 35 L 47.5 35" stroke="#4a5568" strokeWidth="1.8" />
-
-            {/* Bocca animata (apertura se sta parlando) */}
-            <path
-              d={isSpeaking ? "M 32 58 Q 40 70 48 58 Q 40 64 32 58" : current.mouthD}
-              stroke="#9b2c2c"
-              strokeWidth={isSpeaking ? "1.5" : "3"}
-              strokeLinecap="round"
-              fill={isSpeaking ? "#742a2a" : "none"}
-              className={`transition-all duration-150 ${isSpeaking ? "animate-pulse" : ""}`}
-            />
+        <div className={`coach-avatar h-[68px] w-[68px] overflow-hidden rounded-full border-[3px] border-[#c7a56b] bg-[#dfc79e] shadow-[0_0_0_4px_#392d20] transition duration-300 ${isSpeaking ? "is-speaking scale-105" : "group-hover:rotate-2"}`}>
+          <svg viewBox="0 0 80 80" role="img" aria-label={`Ritratto di ${name}`} className="h-full w-full">
+            <defs>
+              <linearGradient id="portrait" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#f1dfbf"/><stop offset="1" stopColor="#caa879"/></linearGradient>
+            </defs>
+            <circle cx="40" cy="40" r="40" fill="url(#portrait)"/>
+            <path d="M8 80 Q12 61 29 59 L40 69 51 59 Q69 61 73 80" fill="#315640"/>
+            <path d="M33 54h14v12l-7 5-7-5z" fill="#c59463"/>
+            <path d="M18 34 Q18 12 40 12 Q62 12 62 35 L58 51 Q52 62 40 63 Q28 62 22 51z" fill="#e8c69c"/>
+            <path d="M17 34 Q16 12 40 11 Q64 12 63 35 L57 29 Q48 31 39 24 Q31 31 21 30z" fill="#423627"/>
+            <path d="M19 31 Q40 23 61 31" fill="none" stroke="#9a7546" strokeWidth="3"/>
+            <path d={current.brow} stroke="#543c2b" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+            <ellipse cx="25" cy={current.eyeY} rx="3" ry="3.5" fill="#372b24"/><ellipse cx="55" cy={current.eyeY} rx="3" ry="3.5" fill="#372b24"/>
+            <circle cx="25" cy={current.eyeY} r="7" fill="none" stroke="#69543a" strokeWidth="1.5"/><circle cx="55" cy={current.eyeY} r="7" fill="none" stroke="#69543a" strokeWidth="1.5"/><path d="M32 36h16" stroke="#69543a" strokeWidth="1.5"/>
+            <path d="M38 39 Q35 48 40 49" fill="none" stroke="#b07f58" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M28 51 Q34 48 40 51 Q46 48 52 51 Q48 59 40 58 Q32 59 28 51" fill="#493329"/>
+            <path d={isSpeaking ? "M 33 55 Q 40 66 47 55 Q 40 61 33 55" : current.mouth} stroke="#8f493d" strokeWidth="2.5" strokeLinecap="round" fill={isSpeaking ? "#843e34" : "none"} className="transition-all duration-200"/>
+            <path d="M18 37h-3M65 37h-3" stroke="#ad824b" strokeWidth="2"/>
           </svg>
         </div>
-
-        {/* Indicatore "Sta Parlando" ad onde sonore */}
-        {isSpeaking && (
-          <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-zinc-950 items-center justify-center text-[8px] text-white">
-              ▲
-            </span>
-          </span>
-        )}
+        <span className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3px] border-[#211b15] ${isSpeaking ? "bg-[#91bd62]" : "bg-[#78836b]"}`} aria-label={isSpeaking ? "Coach sta parlando" : "Coach pronto"} />
       </div>
-
-      {/* Dettaglio Coach e Mood */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-zinc-100">{name}</span>
-          <span className="text-[10px] text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded-full border border-zinc-700/60 font-medium">
-            AI Coach
-          </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold text-[#f4ead8]">{name}</span>
+          <span className="rounded-full border border-[#665039] bg-[#382a1d] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#d8b77c]">Coach AI</span>
         </div>
-        <div className="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          <span>{current.label}</span>
-          {isSpeaking && <span className="text-emerald-400 font-semibold">• Parlando...</span>}
+        <div className={`mt-1 flex items-center gap-2 text-xs ${current.accent}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${isSpeaking ? "animate-pulse bg-[#a8cf75]" : "bg-[#ba965d]"}`} />
+          <span>{isSpeaking ? "Sta parlando…" : current.label}</span>
         </div>
       </div>
+      <span className="hidden text-2xl text-[#ba965d] transition-transform group-hover:-translate-y-1 sm:block" aria-hidden="true">♞</span>
     </div>
   );
 }
