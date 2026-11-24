@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { importRecentGames } from "@/actions/import";
-import { saveGameFromPgn } from "@/actions/games";
 import { analyzeAndSaveGame } from "@/actions/analysis";
 import { GameReplayModal } from "@/components/GameReplayModal";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
@@ -13,7 +12,7 @@ import type { GameItem } from "@/types";
 type HomeStatus =
   | { type: "searching"; username: string; platform: string }
   | { type: "importSuccess"; count: number }
-  | { type: "noGames" | "importFailed" | "analyzing" | "analysisDone" | "analysisFailed" | "importingPgn" | "pgnImported" | "pgnImportFailed" };
+  | { type: "noGames" | "importFailed" | "analyzing" | "analysisDone" | "analysisFailed" };
 
 function getStatusText(status: HomeStatus, text: (typeof messages)[keyof typeof messages]["home"]): string {
   switch (status.type) {
@@ -24,9 +23,6 @@ function getStatusText(status: HomeStatus, text: (typeof messages)[keyof typeof 
     case "analyzing": return text.analyzing;
     case "analysisDone": return text.analysisDone;
     case "analysisFailed": return text.analysisFailed;
-    case "importingPgn": return text.importingPgn;
-    case "pgnImported": return text.pgnImported;
-    case "pgnImportFailed": return text.pgnImportFailed;
   }
 }
 
@@ -35,7 +31,6 @@ export default function Home() {
   const text = messages[language].home;
   const [platform, setPlatform] = useState<"chesscom" | "lichess">("chesscom");
   const [username, setUsername] = useState("");
-  const [pgnText, setPgnText] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzingGameId, setAnalyzingGameId] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<HomeStatus | null>(null);
@@ -70,22 +65,6 @@ export default function Home() {
     } finally { setAnalyzingGameId(null); }
   };
 
-  const handleAnalyzePgn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pgnText.trim()) return;
-    setLoading(true);
-    setStatusMessage({ type: "importingPgn" });
-    try {
-      const saved = await saveGameFromPgn({ pgn: pgnText.trim() });
-      setGamesList((prev) => [{ game: saved.game, isExisting: saved.isExisting }, ...prev.filter((item) => item.game.id !== saved.game.id)]);
-      setStatusMessage({ type: "pgnImported" });
-      await handleAnalyzeGame(saved.game.id);
-    } catch (err: unknown) {
-      console.error(err);
-      setStatusMessage({ type: "pgnImportFailed" });
-    } finally { setLoading(false); }
-  };
-
   const inputClass = "w-full rounded-xl border border-[#504432] bg-[#171511]/80 px-4 py-3 text-sm text-[#f4eee2] placeholder:text-[#777064] transition focus:border-[#bd985d] focus:bg-[#171511] focus:outline-none";
   const cardClass = "rounded-3xl border border-[#4b3c29] bg-[#211c16]/95 p-6 shadow-xl shadow-black/20 backdrop-blur-sm transition duration-300 hover:border-[#82663e] sm:p-7";
 
@@ -106,7 +85,7 @@ export default function Home() {
           <div className="hero-board relative mt-6 grid grid-cols-8 overflow-hidden rounded-lg border border-white/10 opacity-70 sm:mt-8 sm:rounded-xl" aria-hidden="true">{Array.from({ length: 16 }, (_, i) => <span key={i} className={`aspect-square ${Math.floor(i / 8) % 2 === i % 8 % 2 ? "bg-[#dfcca6]/20" : "bg-[#10150f]/20"}`} />)}</div>
         </header>
 
-        <section className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2" aria-label={text.importAria}>
+        <section className="mx-auto w-full max-w-2xl" aria-label={text.importAria}>
           <div style={{ animationDelay: "100ms" }} className={`card-enter ${cardClass}`}>
             <div className="mb-6 flex items-start justify-between gap-4"><div><div className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[#ba965d]">{text.profileStep}</div><h2 className="text-xl font-bold">{text.importHeading}</h2><p className="mt-1 text-sm text-[#aaa294]">{text.importDescription}</p></div><span className="text-3xl text-[#b9955c]">♜</span></div>
             <form onSubmit={handleImport} className="space-y-5">
@@ -115,14 +94,6 @@ export default function Home() {
               </div></fieldset>
               <div><label htmlFor="username" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-[#b9b0a1]">{text.username}</label><input id="username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder={text.usernamePlaceholder} autoComplete="username" className={inputClass}/></div>
               <button type="submit" disabled={loading || !username.trim()} className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#46714e] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-[#56875e] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"><span>{loading ? text.searchingButton : text.searchButton}</span><span className="transition-transform group-hover:translate-x-1">{loading ? "◌" : "→"}</span></button>
-            </form>
-          </div>
-
-          <div style={{ animationDelay: "190ms" }} className={`card-enter ${cardClass}`}>
-            <div className="mb-6 flex items-start justify-between gap-4"><div><div className="mb-2 text-xs font-bold uppercase tracking-[.18em] text-[#ba965d]">{text.pgnStep}</div><h2 className="text-xl font-bold">{text.pgnHeading}</h2><p className="mt-1 text-sm text-[#aaa294]">{text.pgnDescription}</p></div><span className="text-3xl text-[#b9955c]">♝</span></div>
-            <form onSubmit={handleAnalyzePgn} className="space-y-5">
-              <div><div className="mb-2 flex items-center justify-between gap-3"><label htmlFor="pgn" className="text-xs font-semibold uppercase tracking-wider text-[#b9b0a1]">{text.pgnLabel}</label>{pgnText && <button type="button" onClick={() => setPgnText("")} className="rounded-md px-2 py-1 text-xs text-[#bcae95] transition hover:bg-white/5 hover:text-white">{text.clear}</button>}</div><textarea id="pgn" rows={5} value={pgnText} onChange={(e) => setPgnText(e.target.value)} placeholder={'1. e4 e5 2. Nf3 Nc6 3. Bb5 a6…'} className={`${inputClass} min-h-32 resize-y font-mono text-xs leading-6`}/><p className="mt-2 text-[11px] text-[#81796d]">{pgnText.trim() ? text.pgnReady(pgnText.trim().length) : text.pgnHint}</p></div>
-              <button type="submit" disabled={loading || !pgnText.trim()} className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#a37a42] px-4 py-3 text-sm font-bold text-[#19150f] shadow-lg shadow-black/20 transition hover:-translate-y-0.5 hover:bg-[#bc9458] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"><span>{loading ? text.pgnImportingButton : text.pgnImportButton}</span><span className="transition-transform group-hover:translate-x-1">{loading ? "◌" : "↗"}</span></button>
             </form>
           </div>
         </section>

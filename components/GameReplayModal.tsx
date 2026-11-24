@@ -31,9 +31,17 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") setCurrentStep((prev) => Math.min(moves.length, prev + 1));
-      else if (e.key === "ArrowLeft") setCurrentStep((prev) => Math.max(0, prev - 1));
-      else if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setCurrentStep((prev) => Math.min(moves.length, prev + 1));
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setCurrentStep((prev) => Math.max(0, prev - 1));
+      } else if (e.key === "Home") {
+        setCurrentStep(0);
+      } else if (e.key === "End") {
+        setCurrentStep(moves.length);
+      } else if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -54,7 +62,7 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
     return "neutral";
   }, [classification]);
 
-  const moveButton = "h-10 rounded-xl bg-[#30271c] px-2 text-[11px] font-semibold text-[#e4d4b7] transition hover:bg-[#493a27] disabled:cursor-default disabled:opacity-30 sm:px-4 sm:text-sm";
+  const moveButton = "flex h-12 min-w-12 items-center justify-center gap-1 rounded-xl border border-[#665238] bg-[#403321] px-3 text-xs font-bold text-[#f0dfbd] transition hover:bg-[#59452b] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 sm:text-sm";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-[#100e0b]/85 p-0 backdrop-blur-md sm:items-center sm:p-4">
@@ -74,11 +82,11 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
           <section className="flex min-w-0 flex-col items-center justify-start gap-3 sm:gap-4 md:col-span-7 md:justify-center" aria-label={text.boardAndControls}>
             <ChessBoardView fen={currentFen} lastMoveUci={currentMove?.uci}/>
             <nav className="flex w-full max-w-[440px] items-center justify-between gap-1 rounded-2xl border border-[#4b3c29] bg-[#171511]/75 p-1.5 sm:justify-center sm:gap-2 sm:p-2" aria-label={text.moveNavigation}>
-              <button onClick={() => setCurrentStep(0)} disabled={currentStep === 0} className="grid h-10 min-w-10 place-items-center rounded-xl bg-[#30271c] px-2 text-sm text-[#e4d4b7] transition hover:bg-[#493a27] disabled:opacity-30 sm:px-3" title={text.startGame} aria-label={text.startGame}>«</button>
-              <button onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))} disabled={currentStep === 0} className={moveButton}><span className="sm:hidden">‹</span><span className="hidden sm:inline">‹ {text.previous}</span></button>
-              <span className="whitespace-nowrap px-1 text-[10px] font-mono text-[#b5a98f] sm:px-3 sm:text-xs">{currentStep} / {moves.length}</span>
-              <button onClick={() => setCurrentStep((prev) => Math.min(moves.length, prev + 1))} disabled={currentStep === moves.length} className={moveButton}><span className="sm:hidden">›</span><span className="hidden sm:inline">{text.next} ›</span></button>
-              <button onClick={() => setCurrentStep(moves.length)} disabled={currentStep === moves.length} className="grid h-10 min-w-10 place-items-center rounded-xl bg-[#30271c] px-2 text-sm text-[#e4d4b7] transition hover:bg-[#493a27] disabled:opacity-30 sm:px-3" title={text.endGame} aria-label={text.endGame}>»</button>
+              <button onClick={() => setCurrentStep(0)} disabled={currentStep === 0} className="grid h-12 min-w-12 place-items-center rounded-xl bg-[#30271c] px-2 text-base text-[#e4d4b7] transition hover:bg-[#493a27] disabled:cursor-not-allowed disabled:opacity-30" title={text.startGame} aria-label={text.startGame}>«</button>
+              <button onClick={() => setCurrentStep((prev) => Math.max(0, prev - 1))} disabled={currentStep === 0} className={moveButton} title={text.previousMove} aria-label={text.previousMove}><span aria-hidden="true">←</span><span className="hidden sm:inline">{text.previous}</span></button>
+              <span role="status" aria-live="polite" aria-label={text.moveProgress(currentStep, moves.length)} className="whitespace-nowrap px-1 text-[10px] font-mono font-semibold text-[#d9c8a9] sm:px-3 sm:text-xs">{currentStep} / {moves.length}</span>
+              <button onClick={() => setCurrentStep((prev) => Math.min(moves.length, prev + 1))} disabled={currentStep === moves.length} className={moveButton} title={text.nextMove} aria-label={text.nextMove}><span className="hidden sm:inline">{text.next}</span><span aria-hidden="true">→</span></button>
+              <button onClick={() => setCurrentStep(moves.length)} disabled={currentStep === moves.length} className="grid h-12 min-w-12 place-items-center rounded-xl bg-[#30271c] px-2 text-base text-[#e4d4b7] transition hover:bg-[#493a27] disabled:cursor-not-allowed disabled:opacity-30" title={text.endGame} aria-label={text.endGame}>»</button>
             </nav>
             <p className="text-center text-[10px] text-[#898171] sm:text-[11px]">{text.keyboardHelp}</p>
           </section>
