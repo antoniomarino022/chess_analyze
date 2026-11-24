@@ -31,4 +31,7 @@ export interface ChessBoardViewProps {
 export interface CoachAvatarProps {
   mood: CoachMood;
   name?: string;
+  voiceEnabled?: boolean;
+  isSpeaking?: boolean;
+  onToggleVoice?: () => void;
 }

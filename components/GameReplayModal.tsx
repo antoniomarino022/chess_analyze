@@ -7,6 +7,7 @@ import { LanguageSwitch } from "./LanguageSwitch";
 import { useLanguage } from "./LanguageProvider";
 import { messages } from "@/lib/i18n";
 import { generateCoachFeedback, uciToSan } from "@/lib/chess/coach-feedback";
+import { useCoachVoice } from "@/lib/hooks/useCoachVoice";
 import type { AnalyzedMove, CoachMood, GameReplayModalProps, MoveClassification, ChessBoardArrow } from "@/types";
 
 const CLASSIFICATION_CONFIG: Record<MoveClassification, { badgeColor: string; icon: string }> = {
@@ -29,6 +30,7 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
     ? analysis.movesData as AnalyzedMove[]
     : [];
   const [currentStep, setCurrentStep] = useState(0);
+  const { voiceEnabled, setVoiceEnabled, isSpeaking, speak, stop } = useCoachVoice(language);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -111,6 +113,20 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
     return uciToSan(currentMove.fenBefore, currentMove.bestMove);
   }, [currentMove]);
 
+  // Riproduzione vocale automatica neurale ad ogni cambio mossa
+  useEffect(() => {
+    if (coachComment && voiceEnabled) {
+      speak(coachComment);
+    } else {
+      stop();
+    }
+  }, [currentStep, coachComment, voiceEnabled, speak, stop]);
+
+  // Ferma la voce alla chiusura del modal
+  useEffect(() => {
+    return () => stop();
+  }, [stop]);
+
   const moveButton = "flex h-12 min-w-12 items-center justify-center gap-1 rounded-xl border border-[#665238] bg-[#403321] px-3 text-xs font-bold text-[#f0dfbd] transition hover:bg-[#59452b] active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 sm:text-sm";
 
   return (
@@ -172,7 +188,12 @@ export function GameReplayModal({ game, analysis, onClose }: GameReplayModalProp
           </section>
 
           <section className="flex min-w-0 flex-col gap-3 sm:gap-4 md:col-span-5" aria-label={text.commentsAndMoves}>
-            <CoachAvatar mood={coachMood}/>
+            <CoachAvatar
+              mood={coachMood}
+              voiceEnabled={voiceEnabled}
+              isSpeaking={isSpeaking}
+              onToggleVoice={() => setVoiceEnabled((prev) => !prev)}
+            />
             {currentMove ? <div className="space-y-3 rounded-2xl border border-[#4b3c29] bg-[#171511]/75 p-3.5 sm:p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
