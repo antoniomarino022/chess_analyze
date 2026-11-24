@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   const startCommand = getStartCommand(update);
   if (!startCommand) return new Response("OK");
 
-  const appUrl = process.env.MINI_APP_URL!;
+  const appUrl = process.env.MINI_APP_URL ?? "https://chessanalyze.vercel.app";
   let miniAppUrl: URL;
   try {
     miniAppUrl = new URL(appUrl);

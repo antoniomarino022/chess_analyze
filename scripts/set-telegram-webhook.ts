@@ -1,3 +1,8 @@
+import { config } from "dotenv";
+
+config({ path: ".env.local" });
+config({ path: ".env" });
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -5,7 +10,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function setTelegramWebhook() {
   const botToken = process.env.BOT_TOKEN;
   const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
-  const appUrl = process.env.MINI_APP_URL;
+  const appUrl = process.env.MINI_APP_URL ?? "https://chessanalyze.vercel.app";
 
   if (!botToken) {
     console.error("Set BOT_TOKEN in .env.local or .env before registering the webhook.");
