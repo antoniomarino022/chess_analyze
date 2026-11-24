@@ -29,13 +29,13 @@ export async function analyzeAndSaveGame(
   gameId: string,
   depth = 8
 ): Promise<{ analysis: Analysis; isExisting: boolean }> {
-  // 1. Controllo se già analizzata
+  // Controllo se già analizzata
   const existing = await getAnalysisByGameId(gameId);
   if (existing) {
     return { analysis: existing, isExisting: true };
   }
 
-  // 2. Recupera il PGN della partita
+  // Recupera il PGN della partita
   const [game] = await db
     .select({ pgn: games.pgn })
     .from(games)
@@ -46,13 +46,13 @@ export async function analyzeAndSaveGame(
     throw new Error(`Partita non trovata con ID: ${gameId}`);
   }
 
-  // 3. Esegue Stockfish
+  // Esegue Stockfish
   const analysisResult: GameAnalysisResult = await analyzeGamePgn(
     game.pgn,
     depth
   );
 
-  // 4. Salva a DB
+  // Salva a DB
   const newAnalysis: NewAnalysis = {
     gameId,
     depth: analysisResult.depth,

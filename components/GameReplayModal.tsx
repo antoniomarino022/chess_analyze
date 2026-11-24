@@ -5,9 +5,7 @@ import { ChessBoardView } from "./ChessBoardView";
 import { CoachAvatar } from "./CoachAvatar";
 import { generateCoachComment } from "@/actions/coach";
 import { useTextToSpeech } from "@/lib/speech";
-import type { Game, Analysis, AnalyzedMove, MoveClassification, CoachMood } from "@/types";
-
-interface GameReplayModalProps { game: Game; analysis: Analysis; onClose: () => void }
+import type { AnalyzedMove, CoachMood, GameReplayModalProps, MoveClassification } from "@/types";
 
 const CLASSIFICATION_CONFIG: Record<MoveClassification, { label: string; badgeColor: string; icon: string; coachComment: string }> = {
   brilliant: { label: "Brillante", badgeColor: "bg-[#596e4b]/30 text-[#d4dfb9] border-[#78905f]/50", icon: "!!", coachComment: "Mossa geniale! Un sacrificio o una manovra tattica eccezionale." },

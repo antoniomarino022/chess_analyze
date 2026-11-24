@@ -1,56 +1,113 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+function getBestItalianVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  const italianVoices = voices.filter((voice) => /^it(?:-|$)/i.test(voice.lang));
+  const score = (voice: SpeechSynthesisVoice) => {
+    const name = voice.name.toLowerCase();
+    return (
+      (/natural|neural|premium|enhanced|online/.test(name) ? 8 : 0) +
+      (/google|microsoft|apple|cosimo|alice/.test(name) ? 4 : 0) +
+      (/^it-it$/i.test(voice.lang) ? 2 : 0)
+    );
+  };
+
+  return italianVoices.reduce<SpeechSynthesisVoice | undefined>((best, voice) => {
+    return !best || score(voice) > score(best) ? voice : best;
+  }, undefined);
+}
+
+function splitSentences(text: string): string[] {
+  return text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((sentence) => sentence.trim()).filter(Boolean) || [];
+}
 
 export function useTextToSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [supported, setSupported] = useState(false);
   const synthRef = useRef<SpeechSynthesis | null>(null);
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const sequenceRef = useRef(0);
+  const pauseTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      synthRef.current = window.speechSynthesis;
-      setSupported(true);
-    }
+    if (!("speechSynthesis" in window)) return;
+
+    const synth = window.speechSynthesis;
+    const updateVoices = () => {
+      voicesRef.current = synth.getVoices();
+    };
+    synthRef.current = synth;
+    updateVoices();
+    synth.addEventListener("voiceschanged", updateVoices);
+
+    return () => {
+      sequenceRef.current += 1;
+      if (pauseTimerRef.current !== null) window.clearTimeout(pauseTimerRef.current);
+      synth.removeEventListener("voiceschanged", updateVoices);
+      synth.cancel();
+      synthRef.current = null;
+    };
   }, []);
 
-  const speak = useCallback(
-    (text: string) => {
-      if (!synthRef.current || !text) return;
+  const speak = useCallback((text: string) => {
+    const synth = synthRef.current;
+    const sentences = splitSentences(text.trim());
+    if (!synth || sentences.length === 0) return;
 
-      // Interrompe eventuale discorso precedente
-      synthRef.current.cancel();
+    const sequence = ++sequenceRef.current;
+    if (pauseTimerRef.current !== null) window.clearTimeout(pauseTimerRef.current);
+    utteranceRef.current = null;
+    synth.cancel();
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "it-IT";
-      utterance.rate = 1.05; // ritmo leggermente brillante
-      utterance.pitch = 1.0;
+    const availableVoices = synth.getVoices();
+    const voice = getBestItalianVoice(availableVoices.length ? availableVoices : voicesRef.current);
+    let sentenceIndex = 0;
 
-      // Cerca una voce italiana naturale se disponibile nel sistema
-      const voices = synthRef.current.getVoices();
-      const italianVoice = voices.find(
-        (v) => v.lang.startsWith("it") && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Cosimo") || v.name.includes("Alice"))
-      ) || voices.find((v) => v.lang.startsWith("it"));
-
-      if (italianVoice) {
-        utterance.voice = italianVoice;
+    const speakNextSentence = () => {
+      if (sequence !== sequenceRef.current) return;
+      if (sentenceIndex >= sentences.length) {
+        utteranceRef.current = null;
+        setIsSpeaking(false);
+        return;
       }
 
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
+      const sentence = sentences[sentenceIndex++];
+      const isExclamation = /!+$/.test(sentence);
+      const isQuestion = /\?+$/.test(sentence);
+      const utterance = new SpeechSynthesisUtterance(sentence);
+      utterance.lang = voice?.lang || "it-IT";
+      utterance.voice = voice || null;
+      utterance.rate = isExclamation ? 1.02 : isQuestion ? 0.95 : 0.97;
+      utterance.pitch = isExclamation ? 1.1 : isQuestion ? 1.07 : sentenceIndex % 2 === 0 ? 0.98 : 1.02;
+      utteranceRef.current = utterance;
+      utterance.onstart = () => {
+        if (sequence === sequenceRef.current) setIsSpeaking(true);
+      };
+      utterance.onend = () => {
+        if (sequence !== sequenceRef.current) return;
+        pauseTimerRef.current = window.setTimeout(speakNextSentence, 180);
+      };
+      utterance.onerror = (event) => {
+        if (sequence !== sequenceRef.current) return;
+        utteranceRef.current = null;
+        setIsSpeaking(false);
+        console.error("Browser speech synthesis error:", event.error);
+      };
+      synth.speak(utterance);
+    };
 
-      synthRef.current.speak(utterance);
-    },
-    []
-  );
-
-  const stop = useCallback(() => {
-    if (synthRef.current) {
-      synthRef.current.cancel();
-      setIsSpeaking(false);
-    }
+    speakNextSentence();
   }, []);
 
-  return { speak, stop, isSpeaking, supported };
+  const stop = useCallback(() => {
+    sequenceRef.current += 1;
+    if (pauseTimerRef.current !== null) window.clearTimeout(pauseTimerRef.current);
+    pauseTimerRef.current = null;
+    utteranceRef.current = null;
+    synthRef.current?.cancel();
+    setIsSpeaking(false);
+  }, []);
+
+  return { speak, stop, isSpeaking };
 }

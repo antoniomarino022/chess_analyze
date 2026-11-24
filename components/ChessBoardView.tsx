@@ -2,12 +2,7 @@
 
 import React, { useMemo } from "react";
 import { Chess } from "chess.js";
-
-interface ChessBoardViewProps {
-  fen: string;
-  lastMoveUci?: string;
-  flipped?: boolean;
-}
+import type { ChessBoardViewProps } from "@/types";
 
 // Icone SVG vettoriali standard per ciascun pezzo degli scacchi
 const PIECE_SVGS: Record<string, React.ReactNode> = {

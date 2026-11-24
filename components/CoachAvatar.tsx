@@ -1,12 +1,6 @@
 "use client";
 
-import type { CoachMood } from "@/types";
-
-interface CoachAvatarProps {
-  mood: CoachMood;
-  isSpeaking: boolean;
-  name?: string;
-}
+import type { CoachAvatarProps, CoachMood } from "@/types";
 
 const moodConfig: Record<CoachMood, { label: string; brow: string; mouth: string; eyeY: number; accent: string }> = {
   proud: { label: "Impressionato", brow: "M 19 28 Q 24 23 30 27 M 50 27 Q 56 23 61 28", mouth: "M 29 56 Q 40 68 51 56", eyeY: 35, accent: "text-amber-200" },

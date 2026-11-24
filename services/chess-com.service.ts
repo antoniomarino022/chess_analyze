@@ -1,30 +1,5 @@
 import type { ExternalGame } from "@/types";
-
-interface ChessComGame {
-  url: string;
-  pgn: string;
-  time_class?: string;
-  end_time: number;
-  white: {
-    username: string;
-    rating?: number;
-    result?: string;
-  };
-  black: {
-    username: string;
-    rating?: number;
-    result?: string;
-  };
-}
-
-interface ChessComArchivesResponse {
-  archives: string[];
-}
-
-interface ChessComMonthlyGamesResponse {
-  games: ChessComGame[];
-}
-
+import { ChessComGame,ChessComArchivesResponse,ChessComMonthlyGamesResponse } from "@/types/chess";
 /**
  * Client per le API pubbliche di Chess.com (Read-only, non richiede token)
  * Doc: https://www.chess.com/news/view/published-data-api
@@ -47,7 +22,7 @@ export class ChessComService {
   ): Promise<ExternalGame[]> {
     const cleanUsername = username.trim().toLowerCase();
 
-    // 1. Recupera la lista di archivi mensili disponibili per l'utente
+    // Recupera la lista di archivi mensili disponibili per l'utente
     const archivesRes = await fetch(
       `${this.BASE_URL}/${cleanUsername}/games/archives`,
       { headers: this.HEADERS }

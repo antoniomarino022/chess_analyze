@@ -89,7 +89,7 @@ export async function analyzeGamePgn(
         onProgress(i + 1, parsed.moves.length);
       }
 
-      // 1. Valutazione posizione PRIMA della mossa: se calcolata nel turno precedente, riusala!
+      // Valutazione posizione PRIMA della mossa: se calcolata nel turno precedente, riusala!
       let evalBefore: any;
       if (lastEval && lastEval.fen === move.fenBefore) {
         evalBefore = lastEval.evaluation;
@@ -97,7 +97,7 @@ export async function analyzeGamePgn(
         evalBefore = await engine.evaluateFen(move.fenBefore, depth);
       }
 
-      // 2. Valutazione posizione DOPO la mossa giocata
+      // Valutazione posizione DOPO la mossa giocata
       const evalAfter = await engine.evaluateFen(move.fenAfter, depth);
       lastEval = { fen: move.fenAfter, evaluation: evalAfter };
 

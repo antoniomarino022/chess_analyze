@@ -5,9 +5,7 @@ import { importRecentGames } from "@/actions/import";
 import { saveGameFromPgn } from "@/actions/games";
 import { analyzeAndSaveGame } from "@/actions/analysis";
 import { GameReplayModal } from "@/components/GameReplayModal";
-import type { Game, Analysis } from "@/types";
-
-interface GameItem { game: Game; isExisting: boolean; analysis?: Analysis | null }
+import type { GameItem } from "@/types";
 
 export default function Home() {
   const [platform, setPlatform] = useState<"chesscom" | "lichess">("chesscom");

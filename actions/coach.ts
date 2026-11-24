@@ -25,7 +25,7 @@ function safeErrorDetail(payload: unknown): string {
 
 /** Server Action: crea un commento per il coach senza esporre la chiave al browser. */
 export async function generateCoachComment(input: GenerateCoachCommentInput): Promise<string> {
-  const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
+  const apiKey = process.env.DEEPSEEK_API_KEY!.trim();
   if (!apiKey) {
     console.error("DeepSeek: DEEPSEEK_API_KEY is missing in this deployment runtime.");
     return fallbackComment(input, "Coach AI non configurato: verifica DEEPSEEK_API_KEY nell'ambiente del deployment e ridistribuisci.");

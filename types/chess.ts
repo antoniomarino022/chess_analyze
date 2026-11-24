@@ -20,3 +20,30 @@ export interface ParsedPgnResult {
   playedAt: Date | null;
   moves: ParsedPgnMove[];
 }
+
+
+
+export interface ChessComGame {
+  url: string;
+  pgn: string;
+  time_class?: string;
+  end_time: number;
+  white: {
+    username: string;
+    rating?: number;
+    result?: string;
+  };
+  black: {
+    username: string;
+    rating?: number;
+    result?: string;
+  };
+}
+
+export interface ChessComArchivesResponse {
+  archives: string[];
+}
+
+export interface ChessComMonthlyGamesResponse {
+  games: ChessComGame[];
+}

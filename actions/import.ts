@@ -3,19 +3,7 @@
 import { ChessComService } from "@/services/chess-com.service";
 import { LichessService } from "@/services/lichess.service";
 import { saveGameFromPgn } from "./games";
-import type { Game } from "@/types";
-
-export interface ImportGamesOptions {
-  platform: "chesscom" | "lichess";
-  platformUsername: string;
-  userId?: string | null;
-  limit?: number;
-}
-
-export interface ImportedGameResult {
-  game: Game;
-  isExisting: boolean;
-}
+import type { ImportGamesOptions, ImportedGameResult } from "@/types";
 
 /**
  * Server Action: Scarica le partite da Chess.com o Lichess e le salva nel database.
@@ -26,7 +14,7 @@ export async function importRecentGames(
 ): Promise<ImportedGameResult[]> {
   const { platform, platformUsername, userId, limit = 10 } = options;
 
-  // 1. Fetch istantaneo da API esterna
+  // Fetch istantaneo da API esterna
   const externalGames =
     platform === "chesscom"
       ? await ChessComService.getRecentGames(platformUsername, limit)
@@ -34,7 +22,7 @@ export async function importRecentGames(
 
   const results: ImportedGameResult[] = [];
 
-  // 2. Salva ciascuna partita nel database
+  // Salva ciascuna partita nel database
   for (const extGame of externalGames) {
     const saved = await saveGameFromPgn({
       userId,
