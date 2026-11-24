@@ -227,7 +227,7 @@ export function ChessBoardView({ fen, lastMoveUci, flipped = false }: ChessBoard
     : [8, 7, 6, 5, 4, 3, 2, 1];
 
   return (
-    <div className="w-full max-w-[340px] sm:max-w-[420px] md:max-w-[460px] aspect-square rounded-2xl overflow-hidden shadow-2xl border-4 border-zinc-800 bg-[#779952] select-none">
+    <div className="w-full max-w-[min(88vw,440px)] sm:max-w-[440px] aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_20px_55px_rgba(0,0,0,.42)] border-[5px] border-[#a37a42] bg-[#315640] ring-1 ring-[#e6d4b5]/20 select-none transition-shadow duration-300">
       <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
         {ranks.map((rank, rankIdx) =>
           files.map((file, fileIdx) => {
@@ -238,14 +238,14 @@ export function ChessBoardView({ fen, lastMoveUci, flipped = false }: ChessBoard
             const realCol = file.charCodeAt(0) - 97;
             const piece = board[realRow] ? board[realRow][realCol] : null;
 
-            // Colore scacchiera classico verde/crema di Chess.com
+            // Caselle in feltro verde e avorio, coordinate coordinate con il tema dell'app.
             const isDark = (realRow + realCol) % 2 === 1;
             const isHighlight =
               squareName === fromSquare || squareName === toSquare;
 
-            let bgStyle = isDark ? "bg-[#779952]" : "bg-[#edeed1]";
+            let bgStyle = isDark ? "bg-[#477653]" : "bg-[#e6d4b5]";
             if (isHighlight) {
-              bgStyle = isDark ? "bg-[#baca44]" : "bg-[#f5f682]";
+              bgStyle = isDark ? "bg-[#a9a64f]" : "bg-[#f0d88f]";
             }
 
             const pieceKey = piece
@@ -263,7 +263,7 @@ export function ChessBoardView({ fen, lastMoveUci, flipped = false }: ChessBoard
                 {fileIdx === 0 && (
                   <span
                     className={`absolute top-0.5 left-1 text-[10px] font-bold leading-none pointer-events-none ${
-                      isDark ? "text-[#edeed1]" : "text-[#779952]"
+                      isDark ? "text-[#e6d4b5]" : "text-[#315640]"
                     }`}
                   >
                     {rank}
@@ -274,7 +274,7 @@ export function ChessBoardView({ fen, lastMoveUci, flipped = false }: ChessBoard
                 {rankIdx === 7 && (
                   <span
                     className={`absolute bottom-0.5 right-1 text-[10px] font-bold leading-none pointer-events-none ${
-                      isDark ? "text-[#edeed1]" : "text-[#779952]"
+                      isDark ? "text-[#e6d4b5]" : "text-[#315640]"
                     }`}
                   >
                     {file}

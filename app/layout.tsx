@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Chess Analyze · Il tuo laboratorio scacchistico",
+  title: "Chess Analyze",
   description: "Analizza e rivedi le tue partite di scacchi con Stockfish e il tuo coach personale.",
 };
 
