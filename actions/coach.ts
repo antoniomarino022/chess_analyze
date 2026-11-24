@@ -2,91 +2,86 @@
 
 import type { GenerateCoachCommentInput } from "@/types";
 
-/**
- * Server Action: Genera un commento vocale/testuale in stile Coach di Scacchi
- * utilizzando le API dirette di DeepSeek.
- */
-export async function generateCoachComment(
-  input: GenerateCoachCommentInput
-): Promise<string> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+function fallbackComment(input: GenerateCoachCommentInput, reason: string) {
+  const { move } = input;
+  const playerName = move.color === "white" ? input.whitePlayer || "il Bianco" : input.blackPlayer || "il Nero";
+  const hint = move.bestMove ? ` La mossa consigliata era ${move.bestMove}.` : "";
+  return `${reason} ${playerName} ha giocato ${move.san}.${hint}`;
+}
 
-  const { move, whitePlayer, blackPlayer } = input;
-  const playerName =
-    move.color === "white"
-      ? whitePlayer || "il Bianco"
-      : blackPlayer || "il Nero";
+function safeErrorDetail(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "";
+  const root = payload as { error?: unknown; message?: unknown };
+  const error = root.error;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const detail = error as { message?: unknown; type?: unknown; code?: unknown };
+    const message = typeof detail.message === "string" ? detail.message : "";
+    const code = typeof detail.code === "string" ? ` (${detail.code})` : "";
+    return `${message}${code}`.trim();
+  }
+  return typeof root.message === "string" ? root.message : "";
+}
 
-  // Se non c'è la chiave, forniamo un commento di fallback chiaro
+/** Server Action: crea un commento per il coach senza esporre la chiave al browser. */
+export async function generateCoachComment(input: GenerateCoachCommentInput): Promise<string> {
+  const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
   if (!apiKey) {
-    console.warn("DEEPSEEK_API_KEY non trovata nelle variabili d'ambiente di Next.js!");
-    return `[API KEY MANCANTE] Mossa ${move.san} di ${playerName}. Inserisci DEEPSEEK_API_KEY su Vercel.`;
+    console.error("DeepSeek: DEEPSEEK_API_KEY is missing in this deployment runtime.");
+    return fallbackComment(input, "Coach AI non configurato: verifica DEEPSEEK_API_KEY nell'ambiente del deployment e ridistribuisci.");
   }
 
   const systemPrompt = `
-Sei il Maestro Denis, un carismatico Maestro Internazionale e Coach di scacchi dallo stile vivace, ironico, appassionato e teatrale (in stile Chess.com Game Review / GothamChess / Daniel Naroditsky).
-
-Parli direttamente al giocatore guardandolo negli occhi. NON essere mai robotico, monotono o accademico. Varia sempre il lessico e le esclamazioni!
-
-STILE E PERSONALITÀ:
-- BLUNDER / SVISTE GRAVI: Sii drammatico o ironico ("Mamma mia, cosa abbiamo appena visto!", "Regalo di Natale in anticipo!", "Un disastro tattico su tutta la linea!"). Spiega in una riga fulminea la trappola in cui è caduto o cosa ha lasciato indifeso, e grida la mossa corretta.
-- MOSSE BRILLANTI / BEST: Esalta la mossa con entusiasmo contagioso ("Magistrale!", "Calcolo da manuale!", "Visione di gioco pura!").
-- INESATTEZZE / MISTAKE: Pungente ma istruttivo ("Idea comprensibile, ma troppo passiva", "Stai regalando l'iniziativa all'avversario").
-- TEORIA / BOOK: Riconosci l'apertura con eleganza ("Teoria classica, preparazione solida").
-
-REGOLE RIGIDE:
-1. Rispondi SEMPRE in italiano naturale e colloquiale.
-2. Lunghezza: 2-3 frasi incisive e concise, ideali per la recitazione vocale.
-3. NON iniziare mai con "Mossa..." o "Il giocatore ha mosso...". Entra subito nell'emozione del momento!
-4. Cita la mossa migliore se il giocatore ha sbagliato.
+Sei il Maestro Denis, un carismatico Maestro Internazionale e Coach di scacchi dallo stile vivace, ironico, appassionato e teatrale.
+Parli direttamente al giocatore. Non essere robotico o accademico. Varia il lessico e le esclamazioni.
+Per gli errori gravi sii drammatico o ironico, spiega brevemente il pericolo e indica la mossa corretta.
+Per le mosse brillanti o migliori esprimi entusiasmo; per le inesattezze sii pungente ma istruttivo.
+Rispondi sempre in italiano naturale e colloquiale, in 2-3 frasi brevi adatte alla lettura vocale. Non iniziare con "Mossa" o "Il giocatore ha mosso". Cita la mossa migliore se il giocatore ha sbagliato.
 `;
-
   const userContent = `
-Giocatore: ${playerName} (${move.color})
-Mossa giocata: ${move.san} (numero mossa ${move.moveNumber})
-Classificazione Stockfish: ${move.classification}
-Mossa migliore del motore: ${move.bestMove || "Nessuna alternativa netta"}
-Punteggio valutazione: ${move.evaluation?.value ?? 0} (${move.evaluation?.type ?? "cp"})
-FEN attuale: ${move.fenAfter}
-
-Genera il tuo commento da coach:
+Giocatore: ${input.move.color === "white" ? input.whitePlayer || "il Bianco" : input.blackPlayer || "il Nero"} (${input.move.color})
+Mossa giocata: ${input.move.san} (numero ${input.move.moveNumber})
+Classificazione: ${input.move.classification}
+Mossa migliore del motore: ${input.move.bestMove || "Nessuna alternativa netta"}
+Valutazione: ${input.move.evaluation?.value ?? 0} (${input.move.evaluation?.type ?? "cp"})
+FEN: ${input.move.fenAfter}
+Genera il commento del coach.
 `;
 
   try {
     const response = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: "deepseek-chat",
-        messages: [
-          { role: "system", content: systemPrompt.trim() },
-          { role: "user", content: userContent.trim() },
-        ],
+        messages: [{ role: "system", content: systemPrompt.trim() }, { role: "user", content: userContent.trim() }],
         temperature: 0.95,
         presence_penalty: 0.6,
         frequency_penalty: 0.5,
         max_tokens: 160,
       }),
+      cache: "no-store",
     });
 
+    const payload: unknown = await response.json().catch(() => null);
     if (!response.ok) {
-      const errText = await response.text();
-      console.error("DeepSeek API error:", response.status, errText);
-      return `[Errore DeepSeek ${response.status}] ${errText.slice(0, 80)}`;
+      const detail = safeErrorDetail(payload);
+      console.error("DeepSeek API request failed", { status: response.status, detail });
+      const reason = response.status === 401 || response.status === 403
+        ? "DeepSeek ha rifiutato la chiave: ricontrolla DEEPSEEK_API_KEY su Vercel e ridistribuisci."
+        : response.status === 402
+          ? "DeepSeek non ha credito disponibile per questa richiesta."
+          : response.status === 429
+            ? "DeepSeek ha raggiunto il limite di richieste; riprova tra poco."
+            : `DeepSeek ha risposto con errore ${response.status}${detail ? `: ${detail}` : "."}`;
+      return fallbackComment(input, reason);
     }
 
-    const data = await response.json();
-    const comment = data.choices?.[0]?.message?.content?.trim();
-
-    return (
-      comment ||
-      `Hai giocato ${move.san}. Stockfish consigliava ${move.bestMove || "un'altra linea"}.`
-    );
-  } catch (err: any) {
-    console.error("Errore chiamata DeepSeek:", err);
-    return `[Errore Rete DeepSeek: ${err?.message || "sconosciuto"}]`;
+    const data = payload as { choices?: Array<{ message?: { content?: string } }> } | null;
+    return data?.choices?.[0]?.message?.content?.trim() || fallbackComment(input, "Il coach non ha ricevuto un commento valido.");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "errore sconosciuto";
+    console.error("DeepSeek network error:", message);
+    return fallbackComment(input, "DeepSeek non è raggiungibile dal server. Verifica la rete e riprova.");
   }
 }
